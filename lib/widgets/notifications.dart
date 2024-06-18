@@ -45,7 +45,7 @@ class FriendRequestNotification extends StatelessWidget {
             children: [
               const Text("Friend request from ",
                   style: TextStyle(color: Colors.white54, fontSize: 20.0)),
-              Text("${friendRequest.fromUser.username}",
+              Text(friendRequest.fromUser.username,
                   style: const TextStyle(color: Colors.white, fontSize: 20.0)),
             ],
           ),

@@ -9,7 +9,7 @@ import 'package:provider/provider.dart';
 class ApiModel extends ChangeNotifier {
   BasicUser? me;
   late Future<ApiClient> api = _getApiClient();
-  static const _storage = FlutterSecureStorage();
+  static const storage = FlutterSecureStorage();
   static const tokenStorageKey = "Token";
 
   ApiModel() {
@@ -19,7 +19,7 @@ class ApiModel extends ChangeNotifier {
   static Future<ApiClient> _getApiClient() async {
     late Future<ApiClient> apiClient;
 
-    await _storage.read(key: tokenStorageKey).then((token) {
+    await storage.read(key: tokenStorageKey).then((token) {
       apiClient = Future<ApiClient>.value(ApiClient());
       apiClient.then((api) => api.authToken = token);
     });
@@ -36,7 +36,7 @@ class ApiModel extends ChangeNotifier {
         if (token != null) {
           isAuthSuc = true;
           api.authToken = token;
-          _storage.write(key: tokenStorageKey, value: token);
+          storage.write(key: tokenStorageKey, value: token);
         }
       });
     });
@@ -58,7 +58,7 @@ class ApiModel extends ChangeNotifier {
         if (token != null) {
           isAuthSuc = true;
           api.authToken = token;
-          _storage.write(key: tokenStorageKey, value: token);
+          storage.write(key: tokenStorageKey, value: token);
         }
       });
     });
@@ -72,7 +72,7 @@ class ApiModel extends ChangeNotifier {
   }
 
   void logout() {
-    _storage.delete(key: tokenStorageKey);
+    storage.delete(key: tokenStorageKey);
     api.then((api) => api.authToken = null);
     me = null;
     notifyListeners();

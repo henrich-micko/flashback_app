@@ -12,6 +12,7 @@ class UserProfilePicture extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final borderRadius = BorderRadius.circular(10); // Image border
+
     final size = Size.fromRadius(this.size ?? 30);
 
     return Container(

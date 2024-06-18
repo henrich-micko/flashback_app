@@ -2,7 +2,6 @@ import "package:flashbacks/providers/api.dart";
 import "package:flutter/material.dart";
 import "package:gap/gap.dart";
 import "package:go_router/go_router.dart";
-import "package:logger/logger.dart";
 
 enum _SignupScreenPage {
   email,

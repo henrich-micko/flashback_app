@@ -2,6 +2,7 @@ import "package:flashbacks/providers/api.dart";
 import "package:flashbacks/providers/notifications.dart";
 import "package:flashbacks/services/api_client.dart";
 import "package:flashbacks/utils/permissions.dart";
+import "package:flashbacks/utils/utils.dart";
 import "package:flashbacks/utils/widget.dart";
 import "package:flashbacks/widgets/event.dart";
 import "package:flutter/material.dart";
@@ -9,11 +10,6 @@ import "package:gap/gap.dart";
 import "package:go_router/go_router.dart";
 import 'package:flashbacks/models/event.dart';
 import "package:material_symbols_icons/material_symbols_icons.dart";
-
-List getFirstN(List array, int n) {
-  if (array.length < n) return array;
-  return array.sublist(0, n-1);
-}
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -23,23 +19,23 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  late Future<ApiClient> futureApiClient;
-  late Future<Iterable<Event>> futureEvents;
-  bool isPreviewOpened = false;
+  late Future<ApiClient> _futureApiClient;
+  late Future<Iterable<Event>> _futureEvents;
+  bool _isRecentEventPreviewOpened = false;
 
   @override
   void initState() {
     super.initState();
-    futureApiClient = ApiModel.fromContext(context).api;
-    futureEvents = futureApiClient.then((api) => api.event.all());
+    _futureApiClient = ApiModel.fromContext(context).api;
+    _futureEvents = _futureApiClient.then((api) => api.event.all());
 
-    futureApiClient.then((api) =>
+    _futureApiClient.then((api) =>
       NotificationsModel.fromContext(context).loadFriendRequests(api)
     );
   }
 
   Future handleRefresh() async {
-    futureEvents = futureApiClient.then((api) => api.event.all());
+    _futureEvents = _futureApiClient.then((api) => api.event.all());
   }
 
   void handleEventTap(Event event) {
@@ -53,13 +49,13 @@ class _HomeScreenState extends State<HomeScreen> {
         buildSectionHeader("Recent", [
           IconButton(
               onPressed: () => setState(() {
-                isPreviewOpened = !isPreviewOpened;
+                _isRecentEventPreviewOpened = !_isRecentEventPreviewOpened;
               }),
-              icon: Icon(!isPreviewOpened ? Symbols.arrow_drop_down : Symbols.arrow_drop_up))
+              icon: Icon(!_isRecentEventPreviewOpened ? Symbols.arrow_drop_down : Symbols.arrow_drop_up))
         ]),
 
         getFutureBuilder<Iterable<Event>>(
-            futureEvents, (data) =>
+            _futureEvents, (data) =>
               Padding(
                 padding: const EdgeInsets.only(left: 15, right: 15, top: 10),
                 child: AnimatedSize(
@@ -68,7 +64,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     children: getFirstN(data.where((item) => item.status == EventStatus.closed).toList(), 2).map((item) =>
                         Column(
                           children: [
-                            EventCard(event: item, light: true, onTap: () => showFlashbacksBottomSheet(item.id)),
+                            EventCard(event: item, light: true, onTap: () => handleEventTap(item)),
                             const Gap(10)
                           ],
                         ),
@@ -93,7 +89,7 @@ class _HomeScreenState extends State<HomeScreen> {
         Padding(
           padding: const EdgeInsets.only(right: 20, left: 20),
           child: getFutureBuilder<Iterable<Event>>(
-              futureEvents, (data) =>
+              _futureEvents, (data) =>
               EventCardColumn(
                   events: data.where((item) => item.status != EventStatus.closed),
                   onTap: handleEventTap
@@ -102,10 +98,6 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ],
     );
-  }
-
-  void showFlashbacksBottomSheet(int eventId) {
-    context.go("/event/$eventId/flashback/");
   }
 
   @override

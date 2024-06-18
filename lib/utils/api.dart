@@ -27,10 +27,4 @@ abstract class ApiApplicationClient {
     if (_authToken != null) headers["Authorization"] = "Token $_authToken";
     return headers;
   }
-
-  Future waitForToken() async {
-    while (true) {
-      if (authToken != null) break;
-    }
-  }
 }

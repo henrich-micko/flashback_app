@@ -1,16 +1,10 @@
 import 'dart:io';
-import 'dart:ui';
 import 'package:camera/camera.dart';
 import 'package:flashbacks/models/event.dart';
 import 'package:flashbacks/providers/api.dart';
 import 'package:flashbacks/services/api_client.dart';
 import 'package:flashbacks/utils/widget.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/painting.dart';
-import 'package:flutter/rendering.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter/widgets.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_symbols_icons/material_symbols_icons.dart';
