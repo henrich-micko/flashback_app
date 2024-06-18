@@ -5,7 +5,6 @@ import 'package:flashbacks/widgets/user.dart';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
-import 'package:logger/logger.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});

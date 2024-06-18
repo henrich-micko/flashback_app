@@ -3,6 +3,7 @@ import "package:flashbacks/models/user.dart";
 import "package:flashbacks/providers/api.dart";
 import "package:flashbacks/services/api_client.dart";
 import "package:flashbacks/utils/widget.dart";
+import "package:flashbacks/widgets/event.dart";
 import "package:flashbacks/widgets/time.dart";
 import "package:flashbacks/widgets/emoji.dart";
 import "package:flashbacks/widgets/user.dart";
@@ -11,42 +12,39 @@ import "package:flutter_emoji/flutter_emoji.dart";
 import "package:gap/gap.dart";
 import "package:go_router/go_router.dart";
 
-class CreateEventData {
-  Emoji? emoji;
-  String? title;
-  DateTime? startAt;
-  DateTime? endAt;
-  List<int> users = []; // id of users
-
-  bool isValid() {
-    return emoji != null && title != null && startAt != null && endAt != null;
-  }
-}
 
 class CreateEventScreen extends StatefulWidget {
-  final CreateEventData? createEventData;
-  final emojiParser = EmojiParser();
+  final _emojiParser = EmojiParser();
 
-  CreateEventScreen({super.key, this.createEventData});
+  CreateEventScreen({super.key});
 
   @override
   State<CreateEventScreen> createState() => _CreateEventScreen();
 }
 
 class _CreateEventScreen extends State<CreateEventScreen> {
-  late CreateEventData createEventData;
-  TextEditingController titleController = TextEditingController();
+  late Emoji _emoji;
+  final _titleController = TextEditingController();
+  DateTime? _startAt;
+  DateTime? _endAt;
+  late Future<ApiClient> _futureApiClient;
 
   @override
   void initState() {
     super.initState();
 
-    createEventData = widget.createEventData ?? CreateEventData();
-    createEventData.emoji ??= widget.emojiParser.get(Event.defaultEmojiCode);
-    titleController.text = createEventData.title ?? "";
+    _emoji = widget._emojiParser.get(Event.defaultEmojiCode);
+    _futureApiClient = ApiModel.fromContext(context).api;
   }
 
-  String? get eventTitle => createEventData.title;
+  void handleCreate() {
+    if (_startAt == null || _endAt == null)
+      return;
+
+    _futureApiClient.then((api) =>
+      api.event.create(_emoji.name, _titleController.text, _startAt!, _endAt!, [])
+    ).then((event) => context.go("/event/${event.id}/edit-people"));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -58,17 +56,11 @@ class _CreateEventScreen extends State<CreateEventScreen> {
           leading: IconButton(
               icon: const Icon(Icons.arrow_back),
               onPressed: () => context.go("/home")),
-          actions: createEventData.title != null &&
-                  createEventData.startAt != null &&
-                  createEventData.endAt != null
-              ? [
-                  TextButton(
-                      onPressed: () => context.go("/event/create/people",
-                          extra: createEventData),
-                      child: const Text("Next",
-                          style: TextStyle(fontSize: 16, color: Colors.white60)))
-                ]
-              : [],
+          actions: [
+            TextButton(
+                onPressed: handleCreate,
+                child: const Text("Next", style: TextStyle(fontSize: 16, color: Colors.white60)))
+          ]
         ),
         body: SingleChildScrollView(
             child: Padding(
@@ -77,17 +69,16 @@ class _CreateEventScreen extends State<CreateEventScreen> {
                   children: [
                     const Gap(30),
                     EmojiField(
-                        defaultEmoji: createEventData.emoji!,
+                        defaultEmoji: _emoji,
                         onChange: (Emoji value) =>
-                            setState(() => createEventData.emoji = value)),
+                            setState(() => _emoji = value)),
                     const Gap(30),
                     SizedBox(
                       height: 60,
                       child: TextField(
-                        controller: titleController,
+                        controller: _titleController,
                         onChanged: (String value) => setState(() {
-                          titleController.text = value;
-                          createEventData.title = value;
+                          _titleController.text = value;
                         }),
                         style: const TextStyle(color: Colors.white70),
                         decoration: InputDecoration(
@@ -102,18 +93,18 @@ class _CreateEventScreen extends State<CreateEventScreen> {
                     ),
                     const Gap(30),
                     DateTimeField(
-                      defaultDate: createEventData.startAt,
+                      defaultDate: _startAt,
                       onChange: (DateTime value) =>
                           setState(() =>
-                            createEventData.startAt = value
+                            _startAt = value
                           ),
                       helper: "Starting at",
                     ),
                     const Gap(30),
                     DateTimeField(
-                      defaultDate: createEventData.endAt,
+                      defaultDate: _endAt,
                       onChange: (DateTime value) =>
-                          setState(() => createEventData.endAt = value),
+                          setState(() => _endAt = value),
                       helper: "Ending at",
                     ),
                   ],
@@ -122,54 +113,21 @@ class _CreateEventScreen extends State<CreateEventScreen> {
 }
 
 class AddPeopleToEventScreen extends StatefulWidget {
-  final CreateEventData createEventData;
+  final int eventId;
 
-  const AddPeopleToEventScreen({super.key, required this.createEventData});
+  const AddPeopleToEventScreen({super.key, required this.eventId});
 
   @override
   State<AddPeopleToEventScreen> createState() => _AddPeopleToEventScreen();
 }
 
 class _AddPeopleToEventScreen extends State<AddPeopleToEventScreen> {
-  late Future<ApiClient> apiClient;
-  late Future<Iterable<BasicUser>> futureUsers;
-  late CreateEventData createEventData;
+  late Future<ApiClient> _futureApiClient;
 
   @override
   void initState() {
     super.initState();
-    apiClient = ApiModel.fromContext(context).api;
-    createEventData = widget.createEventData..users = [];
-    futureUsers = apiClient.then((api) => api.user.friend.my());
-  }
-
-  void handleUserStatusChanged(int userId, bool value) {
-    value ? addUser(userId) : removeUser(userId);
-  }
-
-  void handleCreateEvent() {
-    if (!createEventData.isValid()) {
-      return; // check for null values
-    }
-
-    apiClient.then((api) => api.event.create(
-        createEventData.emoji!.name,
-        createEventData.title as String,
-        createEventData.startAt as DateTime,
-        createEventData.endAt as DateTime,
-        createEventData.users
-    ));
-
-    context.go("/home");
-  }
-
-  void addUser(int userId) {
-    if (createEventData.users.contains(userId)) return;
-    setState(() => createEventData.users.add(userId));
-  }
-
-  void removeUser(int userId) {
-    setState(() => createEventData.users.remove(userId));
+    _futureApiClient = ApiModel.fromContext(context).api;
   }
 
   @override
@@ -185,32 +143,15 @@ class _AddPeopleToEventScreen extends State<AddPeopleToEventScreen> {
           leading: IconButton(
               icon: const Icon(Icons.arrow_back),
               onPressed: () =>
-                  context.go("/event/create", extra: createEventData)),
+                  context.go("/event/create")),
           actions: [
             TextButton(
-                onPressed: handleCreateEvent,
+                onPressed: () => context.go("/home"),
                 child: const Text("Create",
                     style: TextStyle(fontSize: 16, color: Colors.white24)))
           ],
         ),
-        body: SingleChildScrollView(
-            child: Padding(
-                padding: const EdgeInsets.only(left: 15, right: 15, top: 30, bottom: 20),
-                child: getFutureBuilder(
-                    futureUsers,
-                    (data) => Column(
-                          children: data
-                              .map((item) => Column(
-                                children: [
-                                  UserAsSelector(
-                                      user: item,
-                                      defaultValue: false,
-                                      onChanged: (value) =>
-                                          handleUserStatusChanged(item.id, value)),
-                                  const Divider(),
-                                ],
-                              ))
-                              .toList(),
-                        )))));
+        body: EditEventMembers(eventId: widget.eventId)
+    );
   }
 }

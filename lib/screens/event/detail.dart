@@ -190,13 +190,13 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
           height: 200,
           width: width,
           child: Padding(
-        padding: EdgeInsets.all(20),
+        padding: const EdgeInsets.all(20),
       child: Wrap(
         alignment: WrapAlignment.center,
         direction: Axis.vertical,
         spacing: 30,
         children: [
-          SheetAction(title: "Share", icon: Symbols.share),
+          const SheetAction(title: "Share", icon: Symbols.share),
           SheetAction(title: "Close early", icon: Symbols.close, onTap: handleClose),
           SheetAction(title: "Delete", icon: Symbols.delete, onTap: handleDelete),
         ],

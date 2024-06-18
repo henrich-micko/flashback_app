@@ -1,5 +1,5 @@
 import 'package:flashbacks/providers/api.dart';
-import 'package:flashbacks/screens/auth/welcome_screen.dart';
+import 'package:flashbacks/screens/auth/welcome.dart';
 import 'package:flashbacks/utils/widget.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';

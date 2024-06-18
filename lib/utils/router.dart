@@ -1,6 +1,6 @@
 import 'package:flashbacks/screens/auth/login.dart';
 import 'package:flashbacks/screens/auth/signup.dart';
-import 'package:flashbacks/screens/auth/welcome_screen.dart';
+import 'package:flashbacks/screens/auth/welcome.dart';
 import 'package:flashbacks/screens/event/create.dart';
 import 'package:flashbacks/screens/event/detail.dart';
 import 'package:flashbacks/screens/flashback/create.dart';
@@ -53,16 +53,16 @@ final router = GoRouter(
         path: '/event/create',
         pageBuilder: (context, state) =>
             noTransitionPage(
-                CreateEventScreen(createEventData: state.extra as CreateEventData?)
+                CreateEventScreen()
             )
     ),
 
     GoRoute(
         name: "add-people-to-event",
-        path: '/event/create/people',
+        path: '/event/:eventId/edit-people',
         pageBuilder: (context, state) =>
             noTransitionPage(
-                AddPeopleToEventScreen(createEventData: state.extra as CreateEventData)
+                AddPeopleToEventScreen(eventId: int.parse(state.pathParameters["eventId"]!))
             )
     ),
 
@@ -102,7 +102,7 @@ final router = GoRouter(
         pageBuilder: (context, state) =>
             noTransitionPage(UserScreen(
                 userId: int.parse(state.pathParameters["userId"]!),
-                goBack: state.extra.toString(),
+                goBack: state.extra.toString(), // TODO: FIX THIS HORRIBLE APROACH (navigator.pop doesnt work)
             ))
     ),
 

@@ -51,6 +51,7 @@ class _UserScreenState extends State<UserScreen> {
           centerTitle: true,
           leading: IconButton(
               icon: const Icon(Icons.arrow_back),
+              // TODO: FIX THIS HORRIBLE APROACH (navigator.pop doesnt work)
               onPressed: () => context.go(widget.goBack == null ? "/user/search" : widget.goBack!),
         )),
         body: Padding(

@@ -40,6 +40,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void handleEventTap(Event event) {
     if (event.status == EventStatus.activated) context.go("/event/${event.id}/flashback/create/");
+    else if (event.status == EventStatus.closed) context.go("/event/${event.id}/flashback");
     else context.go("/event/${event.id}");
   }
 
