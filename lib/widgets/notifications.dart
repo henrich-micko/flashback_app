@@ -2,6 +2,7 @@ import 'package:flashbacks/models/user.dart';
 import 'package:flashbacks/utils/time.dart';
 import 'package:flashbacks/widgets/user.dart';
 import 'package:flutter/material.dart';
+import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 
 class FriendRequestNotification extends StatelessWidget {
@@ -53,6 +54,26 @@ class FriendRequestNotification extends StatelessWidget {
                style: const TextStyle(color: Colors.white54, fontSize: 15))
         ],
       ),
+    );
+  }
+}
+
+class NotificationChip extends StatelessWidget {
+  final IconData icon;
+  final int value;
+
+  const NotificationChip({super.key, required this.icon, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      mainAxisAlignment: MainAxisAlignment.start,
+      children: [
+        Icon(icon, size: 20, color: Colors.grey),
+        const Gap(4),
+        Text(value.toString(), style: const TextStyle(fontSize: 18, color: Colors.grey))
+      ],
     );
   }
 }

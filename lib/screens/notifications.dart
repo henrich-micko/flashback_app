@@ -1,6 +1,6 @@
 import 'package:flashbacks/providers/api.dart';
 import 'package:flashbacks/providers/notifications.dart';
-import 'package:flashbacks/services/api_client.dart';
+import 'package:flashbacks/services/api/client.dart';
 import 'package:flashbacks/utils/widget.dart';
 import 'package:flashbacks/widgets/notifications.dart';
 import 'package:flutter/material.dart';
@@ -15,14 +15,13 @@ class NotificationsScreen extends StatefulWidget {
 }
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
-  late Future<ApiClient> _apiClient;
+  late ApiClient _apiClient;
 
   @override
   void initState() {
     super.initState();
     _apiClient = ApiModel.fromContext(context).api;
-    _apiClient.then((api) =>
-        NotificationsModel.fromContext(context).loadFriendRequests(api));
+    NotificationsModel.fromContext(context).loadFriendRequests(_apiClient);
   }
 
   @override

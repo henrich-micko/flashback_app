@@ -1,7 +1,8 @@
 import 'package:flashbacks/models/event.dart';
 import 'package:flashbacks/models/flashback.dart';
 import 'package:flashbacks/providers/api.dart';
-import 'package:flashbacks/services/api_client.dart';
+import 'package:flashbacks/services/api/client.dart';
+import 'package:flashbacks/services/api/event.dart';
 import 'package:flashbacks/utils/time.dart';
 import 'package:flashbacks/utils/widget.dart';
 import 'package:flashbacks/widgets/flashback.dart';
@@ -9,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_symbols_icons/material_symbols_icons.dart';
+
 
 class DetailFlashbackScreen extends StatefulWidget {
   final int eventId;
@@ -20,26 +22,27 @@ class DetailFlashbackScreen extends StatefulWidget {
 }
 
 class _DetailFlashbackScreenState extends State<DetailFlashbackScreen> {
-  late Future<ApiClient> _apiClient;
-  late Future<Iterable<BasicFlashback>> _futureFlashbacks;
-  late Future<Event> _futureEvent;
+  late EventApiDetailClient _eventApiClient;
+  late Future<Iterable<BasicFlashback>> _flashbacks;
+  late Future<Event> _event;
   int _currentIndex = 0;
 
   @override
   void initState() {
     super.initState();
-    _apiClient = ApiModel.fromContext(context).api;
-    _futureFlashbacks = _apiClient.then((api) => api.event.flashback.all(widget.eventId));
-    _futureEvent = _apiClient.then((api) => api.event.get(widget.eventId));
+    _eventApiClient = ApiModel.fromContext(context).api.event.detail(widget.eventId);
+    _event = _eventApiClient.get();
+    _flashbacks = _eventApiClient.flashback.all();
 
-    _futureFlashbacks.then((flashbacks) {
-      if (flashbacks.isEmpty) context.go("/event/${widget.eventId}");
+    _flashbacks.then((flashbacks) {
+      if (flashbacks.isEmpty)
+        context.go("/event/${widget.eventId}");
     });
   }
 
   void _handleNext() {
     setState(() {
-      _futureFlashbacks.then((fbs) {
+      _flashbacks.then((fbs) {
         if (_currentIndex >= fbs.length - 1) {
           _currentIndex = 0;
         } else {
@@ -51,7 +54,7 @@ class _DetailFlashbackScreenState extends State<DetailFlashbackScreen> {
 
   void _handlePrev() {
     setState(() {
-      _futureFlashbacks.then((fbs) {
+      _flashbacks.then((fbs) {
         if (_currentIndex <= 0) {
           _currentIndex = fbs.length - 1;
         } else {
@@ -66,7 +69,7 @@ class _DetailFlashbackScreenState extends State<DetailFlashbackScreen> {
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
-        title: getFutureBuilder(_futureEvent, (event) => Text("${event.emoji.code} ${event.title}", style: const TextStyle(fontSize: 35))),
+        title: getFutureBuilder(_event, (event) => Text("${event.emoji.code} ${event.title}", style: const TextStyle(fontSize: 35))),
         leading: IconButton(
           icon: const Icon(Symbols.arrow_back),
           onPressed: () => context.go("/home")
@@ -74,10 +77,10 @@ class _DetailFlashbackScreenState extends State<DetailFlashbackScreen> {
         )
       ),
       body:
-      getFutureBuilder(_futureFlashbacks, (items) => Column(
+      getFutureBuilder(_flashbacks, (items) => Column(
         children: [
           const Gap(40),
-          Center(child: FlashbackMedia(flashback: items.elementAt(_currentIndex))),
+          Center(child: FlashbackMedia(flashback: items.elementAt(_currentIndex), mediaSource: _eventApiClient.apiBaseUrl)),
 
           Padding(
             padding: const EdgeInsets.all(50),
@@ -85,7 +88,7 @@ class _DetailFlashbackScreenState extends State<DetailFlashbackScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 IconButton(onPressed: _handlePrev, icon: const Icon(Icons.arrow_back_ios)),
-                getFutureBuilder(_futureEvent, (event) => Column(
+                getFutureBuilder(_event, (event) => Column(
                   children: [
                     Text("By ${items.elementAt(_currentIndex).createdBy.username}", style: const TextStyle(fontSize: 25)),
                     Text(dateFormat.format(items.elementAt(_currentIndex).createdAt), style: const TextStyle(fontSize: 17)),

@@ -1,3 +1,4 @@
+import "package:flashbacks/providers/api.dart";
 import "package:flutter/material.dart";
 import "package:gap/gap.dart";
 import "package:go_router/go_router.dart";
@@ -24,7 +25,7 @@ class WelcomeScreen extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: <Widget>[
-                TextButton(onPressed: () => context.go("/auth/login/"), child: const Text("Yep", style: TextStyle(fontSize: 19, color: Colors.white))),
+                TextButton(onPressed: () => ApiModel.fromContext(context).authWithGoogle(), child: const Text("Yep", style: TextStyle(fontSize: 19, color: Colors.white))),
                 const Gap(10),
                 TextButton(onPressed: () => context.go("/auth/signup"), child: const Text("Nope", style: TextStyle(fontSize: 19, color: Colors.white))),
               ],

@@ -1,5 +1,5 @@
 import 'package:flashbacks/models/user.dart';
-import 'package:flashbacks/services/api_client.dart';
+import 'package:flashbacks/services/api/client.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 

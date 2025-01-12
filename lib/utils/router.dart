@@ -3,6 +3,7 @@ import 'package:flashbacks/screens/auth/signup.dart';
 import 'package:flashbacks/screens/auth/welcome.dart';
 import 'package:flashbacks/screens/event/create.dart';
 import 'package:flashbacks/screens/event/detail.dart';
+import 'package:flashbacks/screens/event/list.dart';
 import 'package:flashbacks/screens/flashback/create.dart';
 import 'package:flashbacks/screens/flashback/detail.dart';
 import 'package:flashbacks/screens/home.dart';
@@ -49,6 +50,15 @@ final router = GoRouter(
     ),
 
     GoRoute(
+        name: "event-list",
+        path: '/event/list',
+        pageBuilder: (context, state) =>
+            noTransitionPage(
+              const EventListScreen(),
+            )
+    ),
+
+    GoRoute(
         name: "event-create",
         path: '/event/create',
         pageBuilder: (context, state) =>
@@ -58,11 +68,22 @@ final router = GoRouter(
     ),
 
     GoRoute(
-        name: "add-people-to-event",
-        path: '/event/:eventId/edit-people',
+        name: "event-create-advanced-settings",
+        path: '/event/create/:eventId/advanced-settings',
         pageBuilder: (context, state) =>
             noTransitionPage(
-                AddPeopleToEventScreen(eventId: int.parse(state.pathParameters["eventId"]!))
+              CreateEventAdvancedSettings(
+                  eventId: int.parse(state.pathParameters["eventId"]!)
+              ),
+            )
+    ),
+
+    GoRoute(
+        name: "add-people-to-event",
+        path: '/event/create/:eventId/edit-people',
+        pageBuilder: (context, state) =>
+            noTransitionPage(
+                CreateEventAddPeopleScreen(eventPk: int.parse(state.pathParameters["eventId"]!))
             )
     ),
 

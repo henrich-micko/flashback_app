@@ -1,16 +1,19 @@
 import "package:flashbacks/models/event.dart";
-import "package:flashbacks/models/user.dart";
 import "package:flashbacks/providers/api.dart";
-import "package:flashbacks/services/api_client.dart";
-import "package:flashbacks/utils/widget.dart";
-import "package:flashbacks/widgets/event.dart";
-import "package:flashbacks/widgets/time.dart";
-import "package:flashbacks/widgets/emoji.dart";
-import "package:flashbacks/widgets/user.dart";
+import "package:flashbacks/services/api/event.dart";
+import "package:flashbacks/utils/api/client.dart";
+import "package:flashbacks/utils/errors.dart";
+import "package:flashbacks/widgets/event/fields/datetime.dart";
+import "package:flashbacks/widgets/event/fields/emoji.dart";
+import "package:flashbacks/widgets/event/fields/mode.dart";
+import "package:flashbacks/widgets/event/fields/title.dart";
+import "package:flashbacks/widgets/event/members.dart";
 import "package:flutter/material.dart";
 import "package:flutter_emoji/flutter_emoji.dart";
 import "package:gap/gap.dart";
 import "package:go_router/go_router.dart";
+import "package:material_symbols_icons/material_symbols_icons.dart";
+import "package:material_symbols_icons/symbols.dart";
 
 
 class CreateEventScreen extends StatefulWidget {
@@ -24,134 +27,228 @@ class CreateEventScreen extends StatefulWidget {
 
 class _CreateEventScreen extends State<CreateEventScreen> {
   late Emoji _emoji;
-  final _titleController = TextEditingController();
+  String? _title;
   DateTime? _startAt;
   DateTime? _endAt;
-  late Future<ApiClient> _futureApiClient;
+  late EventApiClient _eventApiClient;
+
+  final FieldError _titleFieldError = FieldError();
+  final FieldError _timeFieldError = FieldError();
 
   @override
   void initState() {
     super.initState();
 
     _emoji = widget._emojiParser.get(Event.defaultEmojiCode);
-    _futureApiClient = ApiModel.fromContext(context).api;
+    _eventApiClient = ApiModel.fromContext(context).api.event;
+    _startAt = DateTime.now().add(const Duration(minutes: 15));
+    _endAt = _startAt!.add(const Duration(hours: 8));
   }
 
-  void handleCreate() {
-    if (_startAt == null || _endAt == null)
+  void _handleSubmit() {
+    if (_title == null || _title == "") {
+      setState(() => _titleFieldError.isActive = true);
       return;
+    }
 
-    _futureApiClient.then((api) =>
-      api.event.create(_emoji.name, _titleController.text, _startAt!, _endAt!, [])
-    ).then((event) => context.go("/event/${event.id}/edit-people"));
+    // start and end shouldnt be null cause thei are set at initState
+
+    _eventApiClient
+        .create(_emoji.name, _title!, _startAt!, _endAt!)
+        .then((event) => context.go("/event/create/${event.id}/advanced-settings"))
+        .catchError((error) => _handleError(error));
+  }
+
+  void _handleError(Map<String, dynamic> errorData) {
+    if (!errorData.containsKey("timing"))
+      return;
+    setState(() =>
+      _timeFieldError.errorMessage = cleanErrorMessage(
+          errorData["timing"].toString()
+      )
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
         appBar: AppBar(
-          centerTitle: true,
-          title: const Text("Create new event",
-              style: TextStyle(fontSize: 25, color: Colors.white)),
-          leading: IconButton(
-              icon: const Icon(Icons.arrow_back),
-              onPressed: () => context.go("/home")),
-          actions: [
-            TextButton(
-                onPressed: handleCreate,
-                child: const Text("Next", style: TextStyle(fontSize: 16, color: Colors.white60)))
-          ]
-        ),
+            forceMaterialTransparency: true,
+            surfaceTintColor: Colors.transparent,
+            scrolledUnderElevation: 0.0,
+            centerTitle: true,
+            title: const Text("Create new event",
+                style: TextStyle(fontSize: 25, color: Colors.white)),
+            leading: IconButton(
+                icon: const Icon(Symbols.close),
+                onPressed: () => context.go("/home")),
+            actions: [
+              IconButton(
+                  icon: const Icon(Symbols.navigate_next),
+                  onPressed: _handleSubmit),
+            ]),
+
+
         body: SingleChildScrollView(
             child: Padding(
-                padding: const EdgeInsets.all(15.0),
+                padding: const EdgeInsets.only(right: 15, left: 15, top: 20),
                 child: Column(
                   children: [
-                    const Gap(30),
-                    EmojiField(
-                        defaultEmoji: _emoji,
-                        onChange: (Emoji value) =>
-                            setState(() => _emoji = value)),
-                    const Gap(30),
-                    SizedBox(
-                      height: 60,
-                      child: TextField(
-                        controller: _titleController,
-                        onChanged: (String value) => setState(() {
-                          _titleController.text = value;
-                        }),
-                        style: const TextStyle(color: Colors.white70),
-                        decoration: InputDecoration(
-                          fillColor: Colors.black12,
-                          hintText: 'Title',
-                          filled: true,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const Gap(30),
-                    DateTimeField(
-                      defaultDate: _startAt,
-                      onChange: (DateTime value) =>
-                          setState(() =>
-                            _startAt = value
-                          ),
-                      helper: "Starting at",
-                    ),
-                    const Gap(30),
-                    DateTimeField(
-                      defaultDate: _endAt,
-                      onChange: (DateTime value) =>
-                          setState(() => _endAt = value),
-                      helper: "Ending at",
-                    ),
+                    TitleFieldCard(onChange: (value) => setState(() {
+                      _title = value;
+                      if (_titleFieldError.isActive && value != "")
+                        _titleFieldError.isActive = false;
+                    }), fieldError: _titleFieldError),
+
+                    const Gap(20),
+                    EmojiCardField(defaultEmoji: _emoji, onChange: (emoji) => setState(() {
+                      _emoji = emoji;
+                    })),
+
+                    const Gap(20),
+                    DateTimeFieldCard(onChange: (startAt, endAt) => setState(() {
+                      _startAt = startAt;
+                      _endAt = endAt;
+                    }), fieldError: _timeFieldError),
                   ],
-                ))));
+                )
+            )
+        )
+    );
   }
 }
 
-class AddPeopleToEventScreen extends StatefulWidget {
+
+class CreateEventAdvancedSettings extends StatefulWidget {
   final int eventId;
 
-  const AddPeopleToEventScreen({super.key, required this.eventId});
+  const CreateEventAdvancedSettings({super.key, required this.eventId});
 
   @override
-  State<AddPeopleToEventScreen> createState() => _AddPeopleToEventScreen();
+  State<CreateEventAdvancedSettings> createState() => _CreateEventAdvancedSettingsState();
 }
 
-class _AddPeopleToEventScreen extends State<AddPeopleToEventScreen> {
-  late Future<ApiClient> _futureApiClient;
+class _CreateEventAdvancedSettingsState extends State<CreateEventAdvancedSettings> {
+  late EventApiDetailClient _eventApiClient;
+
+  EventViewersMode _eventViewersMode = EventViewersMode.onlyMembers;
+  double _mutualFriendsLimit = 0.30;
 
   @override
   void initState() {
     super.initState();
-    _futureApiClient = ApiModel.fromContext(context).api;
+    _eventApiClient = ApiModel.fromContext(context).api.event.detail(widget.eventId);
+  }
+
+  void _handleSubmit() {
+    JsonData patchData = {"viewers_mode": _eventViewersMode.index};
+    if (_eventViewersMode == EventViewersMode.mutualFriends)
+      patchData["mutual_friends_limit"] = _mutualFriendsLimit;
+    _eventApiClient.patch(patchData).then((item) => context.go("/event/create/${widget.eventId}/edit-people/"));
+  }
+
+  void _handleCancel() {
+    _eventApiClient.delete().then((_) => context.go("/home"));
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
         appBar: AppBar(
-          forceMaterialTransparency: true,
-          surfaceTintColor: Colors.transparent,
-          scrolledUnderElevation: 0.0,
-          centerTitle: true,
-          title: const Text("Add your friends",
-              style: TextStyle(fontSize: 25, color: Colors.white)),
-          leading: IconButton(
-              icon: const Icon(Icons.arrow_back),
-              onPressed: () =>
-                  context.go("/event/create")),
-          actions: [
-            TextButton(
-                onPressed: () => context.go("/home"),
-                child: const Text("Create",
-                    style: TextStyle(fontSize: 16, color: Colors.white24)))
-          ],
-        ),
-        body: EditEventMembers(eventId: widget.eventId)
+            forceMaterialTransparency: true,
+            surfaceTintColor: Colors.transparent,
+            scrolledUnderElevation: 0.0,
+            centerTitle: true,
+            title: const Text("Create new event",
+                style: TextStyle(fontSize: 25, color: Colors.white)),
+            leading: IconButton(
+                icon: const Icon(Symbols.close),
+                onPressed: _handleCancel),
+            actions: [
+              IconButton(
+                  icon: const Icon(Symbols.navigate_next),
+                  onPressed: _handleSubmit),
+            ]),
+
+        body: SingleChildScrollView(
+            child: Padding(
+                padding: const EdgeInsets.only(right: 15, left: 15, top: 20),
+                child: Column(
+                  children: [
+                    EventViewersModeFieldCard(
+                      eventViewersMode: _eventViewersMode,
+                      mutualFriendsLimit: _mutualFriendsLimit,
+                      onMFLChange: (value) => setState(() => _mutualFriendsLimit = value),
+                      onOptionChange: (value) => setState(() => _eventViewersMode = value),
+                    ),
+                  ],
+                )
+            )
+        )
+    );
+  }
+}
+
+
+class CreateEventAddPeopleScreen extends StatefulWidget {
+  final int eventPk;
+  const CreateEventAddPeopleScreen({super.key, required this.eventPk});
+
+  @override
+  State<CreateEventAddPeopleScreen> createState() => _CreateEventAddPeopleScreenState();
+}
+
+class _CreateEventAddPeopleScreenState extends State<CreateEventAddPeopleScreen> {
+  late EventApiDetailClient _eventApiClient;
+
+  @override
+  void initState() {
+    super.initState();
+    _eventApiClient = ApiModel.fromContext(context).api.event.detail(widget.eventPk);
+  }
+
+  void _handleCancel() {
+    _eventApiClient.delete().then((_) => context.go("/home"));
+  }
+
+  void _handleSubmit() {
+    context.go("/home");
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+        appBar: AppBar(
+            forceMaterialTransparency: true,
+            surfaceTintColor: Colors.transparent,
+            scrolledUnderElevation: 0.0,
+            centerTitle: true,
+            title: const Text("Create new event",
+                style: TextStyle(fontSize: 25, color: Colors.white)),
+            leading: IconButton(
+                icon: const Icon(Symbols.close),
+                onPressed: _handleCancel),
+            actions: [
+              IconButton(
+                  icon: const Icon(Symbols.navigate_next),
+                  onPressed: _handleSubmit),
+            ]),
+
+        body: SingleChildScrollView(
+            child: Padding(
+                padding: const EdgeInsets.only(top: 10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Padding(
+                      padding: EdgeInsets.only(left: 15),
+                      child: Text("Select event members", style: TextStyle(color: Colors.grey, fontSize: 18)),
+                    ),
+                    EditEventMembers(eventId: widget.eventPk),
+                  ],
+                )
+            )
+        )
     );
   }
 }

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 
-FutureBuilder<T> getFutureBuilder<T>(Future<T> future, Widget Function(T data) builder, [Widget? defaultChild]) {
+FutureBuilder<T> getFutureBuilder<T>(Future<T> future, Widget Function(T data) builder, {Widget? defaultChild}) {
   return FutureBuilder<T>(
       future: future,
       builder: (context, snapshot) {
@@ -11,16 +11,13 @@ FutureBuilder<T> getFutureBuilder<T>(Future<T> future, Widget Function(T data) b
 }
 
 Widget buildSectionHeader(String title, List<Widget>? actions) {
-  return Padding(
-    padding: const EdgeInsets.only(right: 5),
-    child: AppBar(
-        forceMaterialTransparency: true,
-        surfaceTintColor: Colors.transparent,
-        scrolledUnderElevation: 0.0,
-        title: Text(title, style: const TextStyle(fontSize: 24)),
-        titleSpacing: 18,
-        actions: actions
-    ),
+  return AppBar(
+      forceMaterialTransparency: true,
+      surfaceTintColor: Colors.transparent,
+      scrolledUnderElevation: 0.0,
+      title: Text(title, style: const TextStyle(fontSize: 23, fontWeight: FontWeight.w300)),
+      titleSpacing: 15,
+      actions: actions
   );
 }
 

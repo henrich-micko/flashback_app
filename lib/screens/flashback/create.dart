@@ -2,7 +2,8 @@ import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:flashbacks/models/event.dart';
 import 'package:flashbacks/providers/api.dart';
-import 'package:flashbacks/services/api_client.dart';
+import 'package:flashbacks/services/api/client.dart';
+import 'package:flashbacks/services/api/event.dart';
 import 'package:flashbacks/utils/widget.dart';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
@@ -19,11 +20,11 @@ class CreateFlashbackScreen extends StatefulWidget {
 }
 
 class _CreateFlashbackScreenState extends State<CreateFlashbackScreen> {
-  late Future<List<CameraDescription>> _futureCameras;
-  late Future<ApiClient> _apiClient;
-  late Future<Event> _futureEvent;
-  late Future<CameraController> _futureCameraController;
-  late Future<void> _futureCameraInit;
+  late Future<List<CameraDescription>> _cameras;
+  late EventApiDetailClient _eventApiClient;
+  late Future<Event> _event;
+  late Future<CameraController> _cameraController;
+  late Future<void> _cameraInit;
   int _currentCamera = 0;
   File? _flashbackPreview;
   FlashMode _flashMode = FlashMode.off;
@@ -31,25 +32,25 @@ class _CreateFlashbackScreenState extends State<CreateFlashbackScreen> {
   @override
   void initState() {
     super.initState();
-    _apiClient = ApiModel.fromContext(context).api;
-    _futureCameras = availableCameras();
+
+    _eventApiClient = ApiModel.fromContext(context).api.event.detail(widget.eventId);
+    _event = _eventApiClient.get();
+
+    _cameras = availableCameras();
     _setupCameras();
-    _futureEvent = _apiClient.then((api) => api.event.get(widget.eventId));
   }
 
   void _setupCameras() {
-    final futureCamera = _futureCameras.then((cameras) => cameras[_currentCamera]);
-    _futureCameraController = futureCamera.then((camera) => CameraController(camera, ResolutionPreset.veryHigh));
-    _futureCameraInit = _futureCameraController.then((controller) => controller.initialize());
+    final camera = _cameras.then((cameras) => cameras[_currentCamera]);
+    _cameraController = camera.then((camera) => CameraController(camera, ResolutionPreset.veryHigh));
+    _cameraInit = _cameraController.then((controller) => controller.initialize());
   }
 
   void _takePicture() async {
-      await _futureCameraInit;
-      final image = await _futureCameraController.then((camera) => camera.takePicture());
+      await _cameraInit;
+      final image = await _cameraController.then((camera) => camera.takePicture());
       if (!context.mounted) return;
-      setState(() {
-        _flashbackPreview = File(image.path);
-      });
+      setState(() => _flashbackPreview = File(image.path));
   }
 
   void _switchCamera() {
@@ -57,26 +58,24 @@ class _CreateFlashbackScreenState extends State<CreateFlashbackScreen> {
       _currentCamera = _currentCamera == 0 ? 1 : 0;
     });
 
-    final futureCamera = _futureCameras.then((cameras) => cameras[_currentCamera]);
-    futureCamera.then((camera) =>
-        _futureCameraController.then((controller) => controller.setDescription(camera))
+    final camera = _cameras.then((cameras) => cameras[_currentCamera]);
+    camera.then((camera_) =>
+        _cameraController.then((controller) => controller.setDescription(camera_))
     );
   }
 
   void _switchFlashMode() {
-    setState(() {
+    setState(() =>
       _flashMode = _flashMode == FlashMode.off ? FlashMode.auto :
-                   _flashMode == FlashMode.auto ? FlashMode.always : FlashMode.off;
-    });
+                   _flashMode == FlashMode.auto ? FlashMode.always : FlashMode.off
+    );
 
-    _futureCameraController.then((controller) => controller.setFlashMode(_flashMode));
+    _cameraController.then((controller) => controller.setFlashMode(_flashMode));
   }
 
   void _handlePost() {
     if (_flashbackPreview == null) return;
-    _apiClient.then((api) =>
-      api.event.flashback.create(widget.eventId, _flashbackPreview!)
-    );
+    _eventApiClient.flashback.create(_flashbackPreview!);
     context.go("/home");
   }
 
@@ -85,7 +84,7 @@ class _CreateFlashbackScreenState extends State<CreateFlashbackScreen> {
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
-        title: getFutureBuilder(_futureEvent, (event) => Text("${event.emoji.code} ${event.title}", style: const TextStyle(fontSize: 32))),
+        title: getFutureBuilder(_event, (event) => Text("${event.emoji.code} ${event.title}", style: const TextStyle(fontSize: 32))),
         leading: IconButton(
             icon: const Icon(Symbols.arrow_back),
             onPressed: () => _flashbackPreview == null ? context.go("/home") : setState(() {
@@ -97,7 +96,7 @@ class _CreateFlashbackScreenState extends State<CreateFlashbackScreen> {
         ],
       ),
       body: FutureBuilder(
-          future: _futureCameraInit,
+          future: _cameraController,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.done) return _buildCamera();
             else return _buildLoadingScreen();
@@ -114,7 +113,7 @@ class _CreateFlashbackScreenState extends State<CreateFlashbackScreen> {
       children: [
         AnimatedSwitcher(
           duration: const Duration(milliseconds: 500),
-          child: FutureBuilder(future: _futureCameraController, builder: (context, snapshot) {
+          child: FutureBuilder(future: _cameraController, builder: (context, snapshot) {
               if (_flashbackPreview != null)
                 return ClipRRect(
                     borderRadius: const BorderRadius.only(

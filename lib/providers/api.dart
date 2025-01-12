@@ -1,48 +1,36 @@
 import 'dart:async';
 
 import 'package:flashbacks/models/user.dart';
-import 'package:flashbacks/services/api_client.dart';
+import 'package:flashbacks/services/api/client.dart';
+import 'package:flashbacks/utils/api/token.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:provider/provider.dart';
 
-class ApiModel extends ChangeNotifier {
-  BasicUser? me;
-  late Future<ApiClient> api = _getApiClient();
-  static const storage = FlutterSecureStorage();
-  static const tokenStorageKey = "Token";
 
-  ApiModel() {
-    api.then((api) => api.user.me().then((me) => this.me = me));
+class ApiModel extends ChangeNotifier {
+  User? currUser;
+  late ApiClient api;
+
+  ApiModel(String? authToken) {
+    setAuthToken(authToken);
   }
 
-  static Future<ApiClient> _getApiClient() async {
-    late Future<ApiClient> apiClient;
-
-    await storage.read(key: tokenStorageKey).then((token) {
-      apiClient = Future<ApiClient>.value(ApiClient());
-      apiClient.then((api) => api.authToken = token);
-    });
-
-    return apiClient;
+  void setAuthToken(String? authToken, {bool store = true}) {
+    api = ApiClient(authToken: authToken);
+    if (store) {
+      writeAuthToken(authToken);
+    }
   }
 
   Future login(String username, String password) async {
     bool isAuthSuc = false;
-
-    await api.then((api) async {
-      // login through api and save token
-      await api.user.login(username, password).then((token) {
-        if (token != null) {
-          isAuthSuc = true;
-          api.authToken = token;
-          storage.write(key: tokenStorageKey, value: token);
-        }
-      });
+    await api.user.login(username, password).then((authToken) {
+      setAuthToken(authToken, store: true);
+      isAuthSuc = true;
     });
 
     if (isAuthSuc) {
-      await api.then((api) => api.user.me().then((me) => this.me = me));
+      await api.user.me().then((user) => currUser = user);
     }
 
     notifyListeners();
@@ -51,20 +39,28 @@ class ApiModel extends ChangeNotifier {
 
   Future register(String email, String username, String password) async {
     bool isAuthSuc = false;
-
-    await api.then((api) async {
-      // login through api and save token
-      await api.user.register(email, username, password).then((token) {
-        if (token != null) {
-          isAuthSuc = true;
-          api.authToken = token;
-          storage.write(key: tokenStorageKey, value: token);
-        }
-      });
+    await api.user.register(email, username, password).then((authToken) {
+      setAuthToken(authToken, store: true);
+      isAuthSuc = true;
     });
 
     if (isAuthSuc) {
-      await api.then((api) => api.user.me().then((me) => this.me = me));
+      await api.user.me().then((user) => currUser = user);
+    }
+
+    notifyListeners();
+    return isAuthSuc ? Future.value(null) : Future.error({});
+  }
+
+  Future authWithGoogle() async {
+    bool isAuthSuc = false;
+    await api.user.authWithGoogle().then((authToken) {
+      setAuthToken(authToken, store: true);
+      isAuthSuc = true;
+    });
+
+    if (isAuthSuc) {
+      await api.user.me().then((user) => currUser = user);
     }
 
     notifyListeners();
@@ -72,21 +68,16 @@ class ApiModel extends ChangeNotifier {
   }
 
   void logout() {
-    storage.delete(key: tokenStorageKey);
-    api.then((api) => api.authToken = null);
-    me = null;
+    deleteAuthToken();
+    currUser = null;
+    api = ApiClient(authToken: null);
     notifyListeners();
   }
 
-  Future<bool> get isAuth async {
-    return Future(() => api.then((api) => api.authToken != null));
-  }
+  bool get isAuth =>
+    api.isAuth;
 
   static ApiModel fromContext(BuildContext context, [bool listen=false]) {
     return Provider.of<ApiModel>(context, listen: listen);
-  }
-
-  static void apiFromContext(BuildContext context, Function(ApiClient) api) {
-    ApiModel.fromContext(context, false).api.then(api);
   }
 }

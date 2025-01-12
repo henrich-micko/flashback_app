@@ -1,11 +1,11 @@
-class BasicUser {
+class User {
   final int id;
   final String username;
   final String email;
   final String quickDetail;
   final String profileUrl;
 
-  BasicUser({
+  User({
     required this.id,
     required this.username,
     required this.email,
@@ -13,8 +13,8 @@ class BasicUser {
     required this.profileUrl
   });
 
-  factory BasicUser.fromJson(Map<String, dynamic> json) {
-    return BasicUser(
+  factory User.fromJson(Map<String, dynamic> json) {
+    return User(
         id: json["id"],
         username: json["username"],
         email: json["email"],
@@ -31,7 +31,7 @@ enum FriendshipStatus {
   none,
 }
 
-class UserPov extends BasicUser {
+class UserPov extends User {
   final FriendshipStatus friendshipStatus;
 
   UserPov({
@@ -63,8 +63,8 @@ enum FriendRequestStatus {
 
 class FriendRequest {
   final int id;
-  final BasicUser toUser;
-  final BasicUser fromUser;
+  final User toUser;
+  final User fromUser;
   final FriendRequestStatus status;
   final DateTime date;
 
@@ -79,11 +79,34 @@ class FriendRequest {
   factory FriendRequest.fromJson(Map<String, dynamic> json) {
     return FriendRequest(
         id: json["id"],
-        toUser: BasicUser.fromJson(json["to_user"]),
-        fromUser: BasicUser.fromJson(json["from_user"]),
+        toUser: User.fromJson(json["to_user"]),
+        fromUser: User.fromJson(json["from_user"]),
         status: FriendRequestStatus.values[json["status"]],
         date: DateTime.parse(json["date"]),
     );
   }
 }
 
+
+class MiniUser {
+  final int id;
+  final String username;
+  final String email;
+  final String profileUrl;
+
+  MiniUser({
+    required this.id,
+    required this.username,
+    required this.email,
+    required this.profileUrl
+  });
+
+  factory MiniUser.fromJson(Map<String, dynamic> json) {
+    return MiniUser(
+        id: json["id"],
+        username: json["username"],
+        email: json["email"],
+        profileUrl: json["profile_url"]
+    );
+  }
+}

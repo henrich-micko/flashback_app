@@ -1,8 +1,9 @@
 import 'package:flashbacks/providers/api.dart';
 import 'package:flashbacks/screens/auth/welcome.dart';
-import 'package:flashbacks/utils/widget.dart';
 import 'package:flutter/material.dart';
+import 'package:logger/logger.dart';
 import 'package:provider/provider.dart';
+
 
 class IsAuthenticated extends StatelessWidget {
   final Scaffold child;
@@ -11,11 +12,9 @@ class IsAuthenticated extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<ApiModel>(builder: (BuildContext context, ApiModel apiModel, Widget? child) =>
-      getFutureBuilder(apiModel.isAuth, (isAuth) {
-        if (isAuth) return this.child;
-        return const WelcomeScreen();
-      })
-    );
+    return Consumer<ApiModel>(builder: (BuildContext context, ApiModel apiModel, Widget? child) {
+      Logger().i(apiModel.isAuth ? "yes" : "no");
+      return apiModel.isAuth ? this.child : const WelcomeScreen();
+    });
   }
 }

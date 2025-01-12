@@ -11,21 +11,9 @@ class UserProfilePicture extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final borderRadius = BorderRadius.circular(10); // Image border
-
-    final size = Size.fromRadius(this.size ?? 30);
-
-    return Container(
-      padding: const EdgeInsets.all(0), // Border width
-      decoration:
-          BoxDecoration(color: Colors.white, borderRadius: borderRadius),
-      child: ClipRRect(
-        borderRadius: borderRadius,
-        child: SizedBox.fromSize(
-          size: size, // Image radius
-          child: Image.network(profilePictureUrl, fit: BoxFit.cover),
-        ),
-      ),
+    return CircleAvatar(
+      backgroundImage: NetworkImage(profilePictureUrl),
+      radius: size ?? 30,
     );
   }
 }
@@ -48,7 +36,7 @@ class UserProfilePictureWithUsername extends UserProfilePicture {
   }
 }
 
-class UserCollectionRow<T extends BasicUser> extends StatelessWidget {
+class UserCollectionRow<T extends User> extends StatelessWidget {
   final Iterable<T> collection;
   final Function(T item)? onItemTap;
 
@@ -74,7 +62,7 @@ class UserCollectionRow<T extends BasicUser> extends StatelessWidget {
   }
 }
 
-class UserCollectionColumn<T extends BasicUser> extends StatelessWidget {
+class UserCollectionColumn<T extends User> extends StatelessWidget {
   final Iterable<T> collection;
   final Function(T item)? onItemTap;
 
@@ -98,7 +86,7 @@ class UserCollectionColumn<T extends BasicUser> extends StatelessWidget {
 }
 
 class UserCard extends StatelessWidget {
-  final BasicUser user;
+  final User user;
   final Function()? onTap;
 
   const UserCard(
@@ -147,7 +135,7 @@ class UserCard extends StatelessWidget {
 }
 
 class UserAsSelector extends StatefulWidget {
-  final BasicUser user;
+  final User user;
   final bool? defaultValue;
   final Function(bool value)? onChanged;
 
@@ -208,5 +196,47 @@ class _UserAsSelector extends State<UserAsSelector> {
         ],
       ),
     );
+  }
+}
+
+
+class UserStack extends StatelessWidget {
+  final List<String> usersProfilePicUrls;
+  final double size;
+
+  const UserStack({super.key, required this.usersProfilePicUrls, required this.size});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+        height: size * 2 + 4,
+        width: (size * 2 - 4) * usersProfilePicUrls.length,
+        alignment: Alignment.center,
+        child: Padding(
+          padding: const EdgeInsets.only(top: 0, left: 0),
+          child: Stack(
+              clipBehavior: Clip.none,
+              alignment: AlignmentDirectional.bottomEnd,
+              children: usersProfilePicUrls
+                  .asMap()
+                  .entries
+                  .map((item) => Positioned(
+                left: item.key * 16,
+                child: Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                        color: const Color(0xff141218),
+                        width: 2.0), // Border color and width
+                  ),
+                  child: UserProfilePicture(
+                    profilePictureUrl: item.value,
+                    size: size,
+                  ),
+                ),
+              ))
+                  .toList()),
+        ),
+      );
   }
 }

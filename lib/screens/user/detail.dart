@@ -2,7 +2,7 @@
 
 import 'package:flashbacks/models/user.dart';
 import 'package:flashbacks/providers/api.dart';
-import 'package:flashbacks/services/api_client.dart';
+import 'package:flashbacks/services/api/client.dart';
 import 'package:flashbacks/utils/widget.dart';
 import 'package:flashbacks/widgets/user.dart';
 import 'package:flutter/material.dart';
@@ -19,29 +19,31 @@ class UserScreen extends StatefulWidget {
 }
 
 class _UserScreenState extends State<UserScreen> {
-  late Future<ApiClient> _futureApiClient;
-  late Future<UserPov> _futureUser;
+  late ApiClient _apiClient;
+  late Future<UserPov> _user;
 
   @override
   void initState() {
     super.initState();
-    _futureApiClient = ApiModel.fromContext(context).api;
-    _futureUser = _futureApiClient.then((api) => api.user.get(widget.userId));
+    _apiClient = ApiModel.fromContext(context).api;
+    _user = _apiClient.user.get(widget.userId);
   }
 
   void handleActionButtonClick() {
-    _futureUser.then((user) =>
-      _futureApiClient.then((api) {
-        if (user.friendshipStatus == FriendshipStatus.friend) api.user.friend.deleteRequestOrFriendship(user.id);
-        else if (user.friendshipStatus == FriendshipStatus.requestToMe) api.user.friend.acceptRequest(user.id);
-        else if (user.friendshipStatus == FriendshipStatus.requestFromMe) api.user.friend.deleteRequestOrFriendship(user.id);
-        else if (user.friendshipStatus == FriendshipStatus.none) api.user.friend.sendRequest(user.id);
+    _user.then((user) {
+      if (user.friendshipStatus == FriendshipStatus.friend)
+        _apiClient.user.friend.deleteRequestOrFriendship(user.id);
+      else if (user.friendshipStatus == FriendshipStatus.requestToMe)
+        _apiClient.user.friend.acceptRequest(user.id);
+      else if (user.friendshipStatus == FriendshipStatus.requestFromMe)
+        _apiClient.user.friend.deleteRequestOrFriendship(user.id);
+      else if (user.friendshipStatus == FriendshipStatus.none) _apiClient.user.friend
+          .sendRequest(user.id);
 
-        setState(() {
-          _futureUser = _futureApiClient.then((api) => api.user.get(widget.userId));
-        });
-      })
-    );
+      setState(() {
+        _user = _apiClient.user.get(widget.userId);
+      });
+    });
   }
 
   @override
@@ -69,7 +71,7 @@ class _UserScreenState extends State<UserScreen> {
 
   Widget _buildHeader() {
     return getFutureBuilder(
-        _futureUser,
+        _user,
             (user) => SizedBox(
                 height: 100,
                 child: Row(
@@ -98,7 +100,7 @@ class _UserScreenState extends State<UserScreen> {
   Widget _buildActionButton() {
     double width = MediaQuery.of(context).size.width;
 
-    return getFutureBuilder(_futureUser, (user) =>
+    return getFutureBuilder(_user, (user) =>
       SizedBox(
         width: width,
         height: 50,

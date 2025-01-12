@@ -1,16 +1,15 @@
-
-import 'package:flashbacks/models/event.dart';
 import 'package:flashbacks/models/flashback.dart';
 import 'package:flashbacks/providers/api.dart';
-import 'package:flashbacks/services/api_client.dart';
+import 'package:flashbacks/services/api/client.dart';
+import 'package:flashbacks/services/api/event.dart';
 import 'package:flashbacks/utils/widget.dart';
 import 'package:flutter/cupertino.dart';
 
 class FlashbackMedia extends StatelessWidget {
-  static final ApiClient _apiClient = ApiClient();
   final BasicFlashback flashback;
-  
-  const FlashbackMedia({super.key, required this.flashback});
+  final Uri mediaSource;
+
+  const FlashbackMedia({super.key, required this.flashback, required this.mediaSource});
 
   @override
   Widget build(BuildContext context) {
@@ -23,7 +22,7 @@ class FlashbackMedia extends StatelessWidget {
         ),
         child: SizedBox(
             height: 500,
-            child: Image.network(_apiClient.getUrl(flashback.media))
+            child: Image.network(mediaSource.resolve(flashback.media).toString())
         )
     );
   }
@@ -39,14 +38,14 @@ class EventFlashbacks extends StatefulWidget {
 }
 
 class _EventFlashbacksState extends State<EventFlashbacks> {
-  late Future<ApiClient> _apiClient;
-  late Future<Iterable<BasicFlashback>> _futureFlashbacks;
+  late EventApiDetailClient _eventApiClient;
+  late Future<Iterable<BasicFlashback>> _flashbacks;
 
   @override
   void initState() {
     super.initState();
-    _apiClient = ApiModel.fromContext(context).api;
-    _futureFlashbacks = _apiClient.then((api) => api.event.flashback.all(widget.eventId));
+    _eventApiClient = ApiModel.fromContext(context).api.event.detail(widget.eventId);
+    _flashbacks = _eventApiClient.flashback.all();
   }
 
   @override
@@ -55,7 +54,7 @@ class _EventFlashbacksState extends State<EventFlashbacks> {
       padding: const EdgeInsets.all(30),
       child: Column(
         children: [
-          getFutureBuilder(_futureFlashbacks, (items) => FlashbackMedia(flashback: items.first)),
+          getFutureBuilder(_flashbacks, (items) => FlashbackMedia(flashback: items.first, mediaSource: _eventApiClient.apiBaseUrl)),
         ],
       ),
     );

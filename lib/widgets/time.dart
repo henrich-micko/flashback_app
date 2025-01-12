@@ -55,49 +55,15 @@ class _DateTimeFieldState extends State<DateTimeField> {
   }
 
   Future _showSelectPopup(BuildContext context) async {
-    DateTime selectedDateValue = _selectedDate != null ? _selectedDate! : DateTime.now();
+    DateTime initialDate = DateTime.now();
+    DateTime firstDate = DateTime(2000);
+    DateTime lastDate = DateTime(2101);
 
-    // handle submit
-    showCupertinoModalPopup(
-        context: context,
-        builder: (_) => Container(
-          height: 350,
-          color: const Color.fromARGB(255, 30, 30, 30),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              SizedBox(
-                  height: 250,
-                  child: CupertinoDatePicker(
-                      initialDateTime: selectedDateValue,
-                      onDateTimeChanged: (value) {
-                        selectedDateValue = value;
-                      })),
-              CupertinoButton(
-                onPressed: () {
-                  setState(() {
-                    _selectedDate = selectedDateValue;
-                    Navigator.of(context).pop();
-                    widget.onChange!(selectedDateValue);
-                  });
-                },
-                child: Container(
-                  height: 45,
-                  width: 150,
-                  decoration: BoxDecoration(
-                      border: Border.all(
-                        width: 1,
-                        color: Colors.white54,
-                      ),
-                      borderRadius: BorderRadius.circular(12)),
-                  child: const Center(
-                    child: Text("Submit",
-                        style: TextStyle(color: Colors.white54)),
-                  ),
-                ),
-              )
-            ],
-          ),
-        ));
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      firstDate: firstDate,
+      lastDate: lastDate,
+    );
   }
 }
+

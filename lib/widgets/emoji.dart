@@ -6,10 +6,9 @@ import 'package:emoji_picker_flutter/emoji_picker_flutter.dart' as picker;
 class EmojiBox extends StatelessWidget {
   Function? onTap;
   Emoji emoji;
-  double height;
-  double width;
+  double size;
 
-  EmojiBox({super.key, required this.emoji, this.onTap, this.height = 80, this.width = 80});
+  EmojiBox({super.key, required this.emoji, this.onTap, this.size = 80});
 
   @override
   Widget build(BuildContext context) {
@@ -23,10 +22,10 @@ class EmojiBox extends StatelessWidget {
             ),
             color: Colors.black26,
             borderRadius: BorderRadius.circular(12)),
-        width: width,
-        height: height,
+        width: size,
+        height: size,
         child: Center(
-            child: Text(emoji.code, style: const TextStyle(fontSize: 45))),
+            child: Text(emoji.code, style: TextStyle(fontSize: size / 1.77))),
       ),
     );
   }
@@ -36,8 +35,11 @@ class EmojiField extends StatefulWidget {
   final Emoji defaultEmoji;
   final emojiParser = EmojiParser();
   final Function(Emoji value)? onChange;
+  double? size;
 
-  EmojiField({super.key, this.onChange, required this.defaultEmoji});
+  EmojiField({super.key, this.onChange, required this.defaultEmoji, this.size}) {
+    size ??= 80.0;
+  }
 
   @override
   State<EmojiField> createState() => _EmojiFieldState();
@@ -63,7 +65,7 @@ class _EmojiFieldState extends State<EmojiField> {
 
   @override
   Widget build(BuildContext context) {
-    return EmojiBox(emoji: selectedEmoji, onTap: showSelectPopup);
+    return EmojiBox(emoji: selectedEmoji, onTap: showSelectPopup, size: widget.size!);
   }
 
   Future showSelectPopup() async {

@@ -2,7 +2,7 @@
 
 import 'package:flashbacks/models/user.dart';
 import 'package:flashbacks/providers/api.dart';
-import 'package:flashbacks/services/api_client.dart';
+import 'package:flashbacks/services/api/client.dart';
 import 'package:flashbacks/utils/widget.dart';
 import 'package:flashbacks/widgets/general.dart';
 import 'package:flashbacks/widgets/user.dart';
@@ -19,16 +19,17 @@ class MeScreen extends StatefulWidget {
 }
 
 class _MeScreenState extends State<MeScreen> {
-  late Future<ApiClient> _futureApiClient;
-  late Future<BasicUser> _futureUser;
-  late Future<Iterable<BasicUser>> _futureFriends;
+  late ApiClient _apiClient;
+  late Future<User> _futureUser;
+  late Future<Iterable<User>> _futureFriends;
 
   @override
   void initState() {
     super.initState();
-    _futureApiClient = ApiModel.fromContext(context).api;
-    _futureUser = _futureApiClient.then((api) => api.user.me());
-    _futureFriends = _futureApiClient.then((api) => api.user.friend.my());
+
+    _apiClient = ApiModel.fromContext(context).api;
+    _futureUser = _apiClient.user.me();
+    _futureFriends = _apiClient.user.friend.my();
   }
 
   @override

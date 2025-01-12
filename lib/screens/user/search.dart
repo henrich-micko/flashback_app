@@ -14,13 +14,10 @@ class SearchScreen extends StatefulWidget {
 }
 
 class _SearchScreenState extends State<SearchScreen> {
-  late Future<Iterable<BasicUser>> futureSearchedUsers = Future.value([]);
+  late Future<Iterable<User>> futureSearchedUsers = Future.value([]);
 
   void handleSearchChange(String value) {
-    setState(() {
-      if (value == "") futureSearchedUsers = Future.value([]);
-      else ApiModel.apiFromContext(context, (api) => futureSearchedUsers = api.user.search(value));
-    });
+
   }
 
   @override
@@ -51,7 +48,7 @@ class _SearchScreenState extends State<SearchScreen> {
               ),
             ),
             const Gap(25),
-            getFutureBuilder<Iterable<BasicUser>>(futureSearchedUsers, (users) =>
+            getFutureBuilder<Iterable<User>>(futureSearchedUsers, (users) =>
               UserCollectionColumn(
                   collection: users.toList(),
                   onItemTap: (user) => context.go("/user/${user.id}", extra: "/user/search")

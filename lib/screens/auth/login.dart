@@ -19,14 +19,13 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+
   bool _showError = false;
   _LoginScreenPage _page = _LoginScreenPage.username;
 
   void handleClickNext() {
     if (_page == _LoginScreenPage.username) {
-      setState(() {
-        _page = _LoginScreenPage.password;
-      });
+      setState(() => _page = _LoginScreenPage.password);
     }
 
     else if (_page == _LoginScreenPage.password) {
