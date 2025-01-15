@@ -4,6 +4,7 @@ import 'package:flashbacks/models/chat.dart';
 import 'package:flashbacks/models/event.dart';
 import 'package:flashbacks/models/flashback.dart';
 import 'package:flashbacks/models/user.dart';
+import 'package:flashbacks/services/websockets/chat.dart';
 import 'package:flashbacks/utils/api/client.dart';
 import 'package:flashbacks/utils/api/mixins.dart';
 import 'dart:io';
@@ -20,6 +21,7 @@ class EventApiDetailClient extends BaseApiModelDetailClient<Event> with ApiDetMo
 
   @override
   String modelPath = "api/event/{detailPk}/";
+  String wsChatPath = "ws/event/{detailPk}/chat/";
 
   @override
   Event itemFromJson(Map<String, dynamic> json) => Event.fromJson(json);
@@ -28,6 +30,8 @@ class EventApiDetailClient extends BaseApiModelDetailClient<Event> with ApiDetMo
     flashback = EventFlashbackApiClient(apiBaseUrl: apiBaseUrl, eventPk: detailPk, authToken: authToken);
     member = EventMemberApiClient(apiBaseUrl: apiBaseUrl, eventPk: detailPk, authToken: authToken);
     chat = EventChatApiClient(apiBaseUrl: apiBaseUrl, eventPk: detailPk, authToken: authToken);
+
+    wsChatPath = wsChatPath.replaceFirst("{detailPk}", super.detailPk.toString());
   }
 
   Future<Event> close() async {
@@ -38,6 +42,17 @@ class EventApiDetailClient extends BaseApiModelDetailClient<Event> with ApiDetMo
 
   Future<Iterable<EventMember>> getFriendsMembers() {
     return getItems<EventMember>("${modelPath}get_friends_members/", EventMember.fromJson);
+  }
+  
+  ChatWebSocketService getChatWebSocket(Function(Message message) onMessage) {
+    String url = resolveUrl(wsChatPath).toString();
+    url = url.startsWith("http") ? url.replaceFirst("http", "ws") : url.replaceFirst("https", "wss");
+
+    return ChatWebSocketService(
+        socketUrl: Uri.parse(url),
+        authToken: super.authToken,
+        onMessage: onMessage
+    );
   }
 }
 

@@ -4,7 +4,6 @@ import 'package:flashbacks/utils/api/utils.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 import 'package:flashbacks/models/user.dart';
-import 'package:logger/logger.dart';
 
 
 class UserApiClient extends BaseApiClient {
@@ -14,8 +13,15 @@ class UserApiClient extends BaseApiClient {
     friend = FriendApiClient(apiBaseUrl: apiBaseUrl, authToken: authToken);
   }
 
+  Future<AnonymousUserData> anonymous() async {
+    final response = await http.get(Uri.parse("$apiBaseUrl/user/anonymous/"), headers: getHeaders());
+    preventValidResponse(response, 200);
+    final Map<String, dynamic> data = json.decode(response.body);
+    return AnonymousUserData.fromJson(data);
+  }
+
   Future<User> me() async {
-    final response = await http.get(Uri.parse("$apiBaseUrl/api/user/me/"), headers: getHeaders());
+    final response = await http.get(Uri.parse("$apiBaseUrl/user/me/"), headers: getHeaders());
     preventValidResponse(response, 200);
     final Map<String, dynamic> data = json.decode(response.body);
     return User.fromJson(data);
@@ -93,7 +99,7 @@ class UserApiClient extends BaseApiClient {
       final GoogleSignInAccount? account = await googleSignIn.signIn();
       final GoogleSignInAuthentication googleAuth = await account!.authentication;
 
-      final response = await postRequest("/user/auth/google/", data: {'auth_token': googleAuth.accessToken});
+      final response = await postRequest("/api/user/auth/google/", data: {'auth_token': googleAuth.accessToken});
 
       final data = json.decode(response);
       final String token = data['token'];

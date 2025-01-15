@@ -17,7 +17,7 @@ enum EventMemberRole {
 class EventMember extends BaseModel {
   final int id;
   final int event;
-  final User user;
+  final MiniUser user;
   final EventMemberRole role;
 
   EventMember({
@@ -31,7 +31,7 @@ class EventMember extends BaseModel {
     return EventMember(
       id: json["id"],
       event: int.parse(json["event"].toString()),
-      user: User.fromJson(json["user"]),
+      user: MiniUser.fromJson(json["user"]),
       role: EventMemberRole.values[json["role"]],
     );
   }

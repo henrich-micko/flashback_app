@@ -5,23 +5,26 @@ import 'package:flashbacks/utils/models.dart';
 class MessageParent extends BaseModel {
   final int pk;
   final String content;
+  final MiniUser user;
 
   MessageParent({
     required this.pk,
     required this.content,
+    required this.user
   });
 
   factory MessageParent.fromJson(Map<String, dynamic> json) {
     return MessageParent(
       pk: json["pk"],
-      content: json["content"]
+      content: json["content"],
+      user: MiniUser.fromJson(json["user"]),
     );
   }
 }
 
 class Message extends BaseModel {
   final int pk;
-  final MiniUser? user;
+  final MiniUser user;
   final String content;
   final DateTime timestamp;
   final MessageParent? parent;
@@ -39,7 +42,7 @@ class Message extends BaseModel {
   factory Message.fromJson(Map<String, dynamic> json) {
     return Message(
       pk: json["pk"],
-      user: json["user"] != null ? MiniUser.fromJson(json["user"]) : null,
+      user: MiniUser.fromJson(json["user"]),
       content: json["content"],
       timestamp: DateTime.parse(json["timestamp"]),
       parent: json["parent"] != null ? MessageParent.fromJson(json["parent"]) : null,

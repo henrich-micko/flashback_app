@@ -9,17 +9,29 @@ import 'package:provider/provider.dart';
 
 class ApiModel extends ChangeNotifier {
   User? currUser;
+
   late ApiClient api;
 
   ApiModel(String? authToken) {
     setAuthToken(authToken);
   }
 
+  Future _postAuth({bool notifyListeners=true}) async {
+    _loadCurrUser(notifyListeners: notifyListeners);
+  }
+
+  Future _loadCurrUser({bool notifyListeners=true}) async {
+    api.user.me().then((user) => currUser = user);
+    if (notifyListeners)
+      this.notifyListeners();
+  }
+
   void setAuthToken(String? authToken, {bool store = true}) {
     api = ApiClient(authToken: authToken);
-    if (store) {
+    if (store)
       writeAuthToken(authToken);
-    }
+    if (authToken != null)
+      _postAuth(notifyListeners: true);
   }
 
   Future login(String username, String password) async {
@@ -28,12 +40,6 @@ class ApiModel extends ChangeNotifier {
       setAuthToken(authToken, store: true);
       isAuthSuc = true;
     });
-
-    if (isAuthSuc) {
-      await api.user.me().then((user) => currUser = user);
-    }
-
-    notifyListeners();
     return isAuthSuc ? Future.value(null) : Future.error({});
   }
 
@@ -43,12 +49,6 @@ class ApiModel extends ChangeNotifier {
       setAuthToken(authToken, store: true);
       isAuthSuc = true;
     });
-
-    if (isAuthSuc) {
-      await api.user.me().then((user) => currUser = user);
-    }
-
-    notifyListeners();
     return isAuthSuc ? Future.value(null) : Future.error({});
   }
 
@@ -58,12 +58,6 @@ class ApiModel extends ChangeNotifier {
       setAuthToken(authToken, store: true);
       isAuthSuc = true;
     });
-
-    if (isAuthSuc) {
-      await api.user.me().then((user) => currUser = user);
-    }
-
-    notifyListeners();
     return isAuthSuc ? Future.value(null) : Future.error({});
   }
 

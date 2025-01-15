@@ -1,3 +1,5 @@
+import 'package:flashbacks/utils/models.dart';
+
 class User {
   final int id;
   final String username;
@@ -88,7 +90,7 @@ class FriendRequest {
 }
 
 
-class MiniUser {
+class MiniUser extends BaseModel {
   final int id;
   final String username;
   final String email;
@@ -106,7 +108,53 @@ class MiniUser {
         id: json["id"],
         username: json["username"],
         email: json["email"],
-        profileUrl: json["profile_url"]
+        profileUrl: json["profile"]
+    );
+  }
+  
+  factory MiniUser.fromAnonymous(AnonymousUserData instance) {
+    return MiniUser(
+      id: instance.id,
+      username: instance.username,
+      email: instance.email,
+      profileUrl: instance.profileUrl
     );
   }
 }
+
+
+class AnonymousUserData extends BaseModel {
+  final int id;
+  final String username;
+  final String email;
+  final String profileUrl;
+
+  AnonymousUserData({
+    required this.id,
+    required this.username,
+    required this.email,
+    required this.profileUrl
+  });
+
+  factory AnonymousUserData.fromJson(Map<String, dynamic> json) {
+    return AnonymousUserData(
+        id: json["id"],
+        username: json["username"],
+        email: json["email"],
+        profileUrl: json["profile_url"]
+    );
+  }
+
+  // THIS IS HORRIBLE I DONT KNOW WHY I DID IT I JUST REALY DONT WANE CHECK ANOTHER NULL
+  factory AnonymousUserData.defaultData() {
+    return AnonymousUserData(
+        id: -1,
+        username: "flashbacks_user",
+        email: "flashbacks_user@flashbacks.com",
+        profileUrl: "https://img.buzzfeed.com/buzzfeed-static/static/2020-03/19/3/campaign_images/756f49d8c6f3/if-you-can-name-at-least-12-the-office-employees--2-604-1584589997-10_dblbig.jpg?resize=1200:*",
+    );
+  }
+}
+
+
+
