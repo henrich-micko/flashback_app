@@ -8,9 +8,10 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_symbols_icons/material_symbols_icons.dart';
 
-
 class EventListScreen extends StatefulWidget {
-  const EventListScreen({super.key});
+  final Function() goLeft;
+
+  const EventListScreen({super.key, required this.goLeft});
 
   @override
   State<EventListScreen> createState() => _State();
@@ -18,9 +19,13 @@ class EventListScreen extends StatefulWidget {
 
 class _State extends State<EventListScreen> with TickerProviderStateMixin {
   late EventApiClient _eventApiClient;
-  late Future<Iterable<Event>> _events;
+  
+  late Future<Iterable<Event>> _openedEvents;
+  late Future<Iterable<Event>> _closedEvents;
   EventStatus _filterStatus = EventStatus.opened;
-
+  
+  final _pageController = PageController();
+  
   @override
   void initState() {
     super.initState();
@@ -30,58 +35,68 @@ class _State extends State<EventListScreen> with TickerProviderStateMixin {
   }
 
   void _switchFilterStatus() {
-    final status = _filterStatus == EventStatus.opened ? EventStatus.closed : EventStatus.opened;
+    final status = _filterStatus == EventStatus.opened
+        ? EventStatus.closed
+        : EventStatus.opened;
     setState(() => _filterStatus = status);
-    _loadEvents();
+    _pageController.animateToPage(
+        _filterStatus == EventStatus.opened ? 0 : 1,
+        duration: const Duration(milliseconds: 475),
+        curve: Curves.easeInOutQuart
+    );
   }
 
   void _loadEvents() {
-    _events = _eventApiClient.filter({"status": _filterStatus.index.toString()});
+    _openedEvents =
+        _eventApiClient.filter({"status": EventStatus.opened.index.toString()});
+    _closedEvents =
+        _eventApiClient.filter({"status": EventStatus.closed.index.toString()});
   }
-  
+
   void _handleTap(Event event) {
-    context.go("event/${event.id}");
+    context.push("/event/${event.id}");
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-          forceMaterialTransparency: true,
-          surfaceTintColor: Colors.transparent,
-          scrolledUnderElevation: 0.0,
-          title: const Text("My events", style: TextStyle(fontSize: 25)),
-          leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => context.go("/home")),
-          actions: [
-            IconButton(onPressed: () => context.go("/event/create"), icon: const Icon(Symbols.qr_code_scanner), color: Colors.grey),
-            IconButton(onPressed: () => context.go("/event/create"), icon: const Icon(Icons.add), color: Colors.grey),
-          ],
+        forceMaterialTransparency: true,
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0.0,
+        title: const Text("My events", style: TextStyle(fontSize: 25)),
+        leading: IconButton(
+            icon: const Icon(Icons.arrow_back), onPressed: widget.goLeft),
+        actions: [
+          IconButton(
+              onPressed: () => context.push("/event/create"),
+              icon: const Icon(Symbols.qr_code_scanner),
+              color: Colors.grey),
+          IconButton(
+              onPressed: () => context.push("/event/create"),
+              icon: const Icon(Icons.add),
+              color: Colors.grey),
+        ],
       ),
       body: SingleChildScrollView(
         scrollDirection: Axis.vertical,
-        child: Padding(
-          padding: const EdgeInsets.only(left: 12, right: 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              _buildEventFilterButton(),
-              getFutureBuilder(
-                  _events, (events) {
-                      if (events.isEmpty) return const Padding(
-                        padding: EdgeInsets.only(top: 100),
-                        child: NoEventsPlaceHolder(),
-                      );
-                      return EventColumn(collection: events.toList(), onItemTap: _handleTap);
-                    },
-                ),
-            ],
-          ),
-        )),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            _buildEventFilterButton(),
+
+            if (_filterStatus == EventStatus.opened)
+              _buildOpenedEventsPage(),
+            if (_filterStatus == EventStatus.closed)
+              _buildClosedEventsPage(),
+          ],
+        ),
+      )
     );
   }
 
   Widget _buildEventFilterButton() {
-    final mode = _filterStatus == EventStatus.opened ? "Closed" : "Opened";
+    final mode = _filterStatus == EventStatus.opened ? "closed" : "opened";
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.end,
@@ -89,10 +104,32 @@ class _State extends State<EventListScreen> with TickerProviderStateMixin {
       children: [
         TextButton(
           onPressed: _switchFilterStatus,
-          child: Text("$mode events",
+          child: Text("View $mode events ",
               style: const TextStyle(fontSize: 15, color: Colors.grey)),
         ),
       ],
+    );
+  }
+
+  Widget _buildOpenedEventsPage() {
+    return getFutureBuilder(
+      _openedEvents,
+      (events) {
+        if (events.isEmpty)
+          return NoEventsPlaceHolder(mode: NoEventPlaceHolderMode.future);
+        return EventColumn(collection: events.toList(), onItemTap: _handleTap);
+      },
+    );
+  }
+
+  Widget _buildClosedEventsPage() {
+    return getFutureBuilder(
+      _closedEvents,
+          (events) {
+        if (events.isEmpty)
+          return NoEventsPlaceHolder(mode: NoEventPlaceHolderMode.past);
+        return EventColumn(collection: events.toList(), onItemTap: _handleTap);
+      },
     );
   }
 }

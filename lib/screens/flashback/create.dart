@@ -2,7 +2,6 @@ import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:flashbacks/models/event.dart';
 import 'package:flashbacks/providers/api.dart';
-import 'package:flashbacks/services/api/client.dart';
 import 'package:flashbacks/services/api/event.dart';
 import 'package:flashbacks/utils/widget.dart';
 import 'package:flutter/material.dart';
@@ -25,7 +24,7 @@ class _CreateFlashbackScreenState extends State<CreateFlashbackScreen> {
   late Future<Event> _event;
   late Future<CameraController> _cameraController;
   late Future<void> _cameraInit;
-  int _currentCamera = 0;
+  int _currentCamera = 1;
   File? _flashbackPreview;
   FlashMode _flashMode = FlashMode.off;
 
@@ -83,8 +82,10 @@ class _CreateFlashbackScreenState extends State<CreateFlashbackScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        centerTitle: true,
-        title: getFutureBuilder(_event, (event) => Text("${event.emoji.code} ${event.title}", style: const TextStyle(fontSize: 32))),
+        forceMaterialTransparency: true,
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0.0,
+        title: getFutureBuilder(_event, (event) => Text("${event.emoji.code} ${event.title}")),
         leading: IconButton(
             icon: const Icon(Symbols.arrow_back),
             onPressed: () => _flashbackPreview == null ? context.go("/home") : setState(() {
@@ -92,7 +93,7 @@ class _CreateFlashbackScreenState extends State<CreateFlashbackScreen> {
             }),
         ),
         actions: [
-          IconButton(onPressed: () => context.go("/event/${widget.eventId}"), icon: const Icon(Icons.more_vert))
+          IconButton(onPressed: () => context.go("/event/${widget.eventId}"), icon: const Icon(Symbols.chat_bubble_outline))
         ],
       ),
       body: FutureBuilder(

@@ -9,7 +9,7 @@ class NotificationsModel extends ChangeNotifier {
   Future<Iterable<FriendRequest>> get friendRequests => _futureFriendRequests;
 
   Future loadFriendRequests(ApiClient apiClient) async {
-    _futureFriendRequests = apiClient.user.requests();
+    _futureFriendRequests = apiClient.authUser.requests();
     notifyListeners();
   }
 

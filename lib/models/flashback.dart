@@ -4,7 +4,7 @@ import 'package:flashbacks/utils/models.dart';
 class BasicFlashback extends BaseModel {
   final int id;
   final String media;
-  final User createdBy;
+  final MiniUser createdBy;
   final DateTime createdAt;
 
   BasicFlashback({
@@ -18,7 +18,7 @@ class BasicFlashback extends BaseModel {
     return BasicFlashback(
         id: json["id"],
         media: json["media"],
-        createdBy: User.fromJson(json["created_by"]),
+        createdBy: MiniUser.fromJson(json["created_by"]),
         createdAt: DateTime.parse(json["created_at"])
     );
   }

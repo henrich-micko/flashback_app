@@ -2,7 +2,7 @@ import 'package:intl/intl.dart';
 
 
 final dateFormat = DateFormat("d.M. hh:mm");
-final timeFormat = DateFormat("HH:mm");
+final timeFormat = DateFormat("hh:mm");
 
 String humanizePastDateTIme(DateTime dateTime, {String pre = "Published"}) {
   final now = DateTime.now();
@@ -50,4 +50,27 @@ String humanizeUpcomingDate(DateTime dateTime) {
   }
 
   return DateFormat('d MMM yyyy').format(dateTime);
+}
+
+String getCountdownLabel(DateTime dateTime) {
+  final now = DateTime.now();
+  final difference = dateTime.difference(now);
+
+  if (difference.inMinutes < 60) {
+    return '${difference.inMinutes}min';
+  } else if (difference.inHours < 24) {
+    return '${difference.inHours}h';
+  } else if (difference.inDays < 7) {
+    return '${difference.inDays}d';
+  } else if (difference.inDays < 14) {
+    return '1w';
+  } else if (difference.inDays < 21) {
+    return '2w';
+  } else if (difference.inDays < 28) {
+    return '3w';
+  } else if (difference.inDays < 60) {
+    return '1 mon';
+  } else {
+    return '${(difference.inDays / 30).round()} mon';
+  }
 }

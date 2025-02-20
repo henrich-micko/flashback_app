@@ -21,7 +21,7 @@ class EventColumn extends StatelessWidget {
             .map((item) => Column(
                   children: [
                     EventContainer(event: item),
-                    const Divider(),
+                    const Gap(5),
                   ],
                 ))
             .toList());
@@ -54,11 +54,11 @@ class EventCardRow extends StatelessWidget {
                   )
                 : eventsWidgets.length == 1
                     ? eventsWidgets.first
-                    : NoEventHolder(onTap: () => context.go("/event/create")),
+                    : NoEventHolder(onTap: () => context.push("/event/create")),
           ),
           const Gap(10),
           eventsWidgets.length > 1
-              ? SmoothPageIndicator(
+              ? SmoothPageIndicator  (
                   controller: controller,
                   count: eventsWidgets.length,
                   effect: const ScrollingDotsEffect(

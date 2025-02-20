@@ -66,7 +66,7 @@ abstract class BaseApiClient {
 
   @protected
   Future deleteItem(String path) async {
-    deleteRequest(path);
+    return deleteRequest(path);
   }
 
   @protected
@@ -78,36 +78,46 @@ abstract class BaseApiClient {
   }
 
   @protected
-  Future<String> getRequest(String path, {GetData data = const {}}) async {
+  Future<String> getRequest(String path, {GetData data = const {}, int status=200}) async {
     final response = await http.get(
         resolveUrl(path).resolve(generateGetParamsString(data)), headers: getHeaders()
     );
-    if (response.statusCode != 200)
-      return Future.error(json.decode(response.body));
+    if (response.statusCode != status)
+      return Future.error(
+          response.statusCode != 204 ? json.decode(response.body) : response.body
+      );
     return response.body;
   }
 
   @protected
-  Future<String> deleteRequest(String path) async {
+  Future<String> deleteRequest(String path, {int status=204}) async {
     final response = await http.delete(resolveUrl(path), headers: getHeaders());
-    if (response.statusCode != 204)
-      return Future.error(json.decode(response.body));
+    if (response.statusCode != status)
+      return Future.error(response.statusCode != 204 ? json.decode(response.body) : response.body);
     return response.body;
   }
 
   @protected
-  Future<String> postRequest(String path, {JsonData data = const {}}) async {
+  Future<String> postRequest(String path, {JsonData data = const {}, int status=201}) async {
     final response = await http.post(resolveUrl(path), headers: getHeaders(), body: jsonEncode(data));
-    if (response.statusCode != 201)
-      return Future.error(json.decode(response.body));
+    if (response.statusCode != status)
+      return Future.error(response.statusCode != 204 ? json.decode(response.body) : response.body);
     return response.body;
   }
 
   @protected
-  Future<String> patchRequest(String path, {JsonData data = const {}}) async {
+  Future<String> patchRequest(String path, {JsonData data = const {}, int status=200}) async {
     final response = await http.patch(resolveUrl(path), headers: getHeaders(), body: jsonEncode(data));
-    if (response.statusCode != 200)
-      return Future.error(json.decode(response.body));
+    if (response.statusCode != status)
+      return Future.error(response.statusCode != 204 ? json.decode(response.body) : response.body);
+    return response.body;
+  }
+
+  @protected
+  Future<String> putRequest(String path, {JsonData data = const {}, int status=200}) async {
+    final response = await http.put(resolveUrl(path), headers: getHeaders(), body: jsonEncode(data));
+    if (response.statusCode != status)
+      return Future.error(response.statusCode != 204 ? json.decode(response.body) : response.body);
     return response.body;
   }
 }

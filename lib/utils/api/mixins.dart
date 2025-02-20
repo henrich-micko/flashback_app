@@ -27,6 +27,12 @@ mixin ApiModelDeleteMixin<T extends BaseModel> on BaseApiModelClient<T> {
   }
 }
 
+mixin ApiModelSearchMixin<T extends BaseModel> on BaseApiModelClient<T> {
+  Future<Iterable<T>> search(String query, {String path="search/"}) async {
+    return getItems<T>("$modelPath$path", itemFromJson, filter: {"q": query});
+  }
+}
+
 // detail
 
 mixin ApiDetModelDeleteMixin<T extends BaseModel> on BaseApiModelDetailClient<T> {
@@ -46,4 +52,3 @@ mixin ApiDetModelPatchMixin<T extends BaseModel> on BaseApiModelDetailClient<T> 
     return patchItem<T>(modelPath, data, itemFromJson);
   }
 }
-

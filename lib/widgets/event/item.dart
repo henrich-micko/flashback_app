@@ -1,9 +1,12 @@
 import "package:flashbacks/models/event.dart";
 import "package:flashbacks/utils/time.dart";
+import "package:flutter/cupertino.dart";
 import "package:flutter/material.dart";
 import "package:gap/gap.dart";
 import "package:go_router/go_router.dart";
+import "package:logger/logger.dart";
 import "package:material_symbols_icons/material_symbols_icons.dart";
+import "package:path/path.dart";
 
 
 class EventContainer extends StatelessWidget {
@@ -14,21 +17,31 @@ class EventContainer extends StatelessWidget {
   const EventContainer(
       {super.key, required this.event, this.onTap, this.light});
 
+  String _getTimeLabel() {
+    if (event.status == EventStatus.activated)
+      return "Happening right now! 🔥";
+    return "${humanizeUpcomingDate(event.startAt)} at ${timeFormat.format(event.startAt)}";
+  }
+
   @override
   Widget build(BuildContext context) {
-    final width = MediaQuery.of(context).size.width * 0.95;
-
-    return SizedBox(
-      width: width,
-      child: GestureDetector(
-        onTap: () => context.go("/event/${event.id}/"),
+    return GestureDetector(
+      onTap: () => context.push("/event/${event.id}/"),
+      child: SizedBox(
+        width: double.infinity,
         child: Padding(
           padding: const EdgeInsets.only(right: 15),
           child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Expanded(flex: 1, child: _buildEmojiSection()),
-              Expanded(flex: 2, child: _buildMiddleSection()),
-              Expanded(flex: 1, child: _buildRightSection()),
+              Row(
+                children: [
+                  _buildEmojiSection(),
+                  _buildMiddleSection(),
+                ],
+              ),
+              if (event.status == EventStatus.activated)
+                _buildCountDownSection(),
             ],
           ),
         ),
@@ -36,41 +49,40 @@ class EventContainer extends StatelessWidget {
     );
   }
 
+  Widget _buildCountDownSection() {
+    return Text(
+        getCountdownLabel(event.endAt),
+        style: const TextStyle(color: Colors.grey, fontSize: 30)
+    );
+  }
+
   Widget _buildEmojiSection() {
     return SizedBox(
-      width: 100,
+      width: 80,
       child: Center(
-          child: Text(event.emoji.code, style: const TextStyle(fontSize: 55))),
+          child: Text(event.emoji.code, style: const TextStyle(fontSize: 45))),
     );
   }
 
   // Event title and start at timing
   Widget _buildMiddleSection() {
-    return Padding(
-      padding: const EdgeInsets.only(left: 15, right: 15),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(event.title,
-              style: const TextStyle(color: Colors.white, fontSize: 22)),
-          Text("${humanizeUpcomingDate(event.startAt)} at ${timeFormat.format(event.startAt)}",
-            style: const TextStyle(color: Colors.grey, fontSize: 15)),
-        ],
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Text(event.title, style: const TextStyle(color: Colors.white, fontSize: 22)),
+        Text(_getTimeLabel(), style: const TextStyle(color: Colors.grey, fontSize: 15)),
+      ],
     );
   }
 
   // friends members and notifications
-  Widget _buildRightSection() {
-    return const SizedBox(
-      width: 50,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          Icon(Symbols.notifications_active),
-        ],
-      ),
+  Widget _buildRightSection(BuildContext context) {
+    if (event.status != EventStatus.activated)
+      return Container();
+    return TextButton(
+        onPressed: () => context.go("/event/${event.id}/flashback/create"),
+        child: const Text("📹", style: TextStyle(fontSize: 25)),
     );
   }
 }
@@ -141,7 +153,6 @@ class _EventWithNewsState extends State<EventWithNews> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 _buildLeftSection(),
-                // const NotificationChip(icon: Symbols.message, value: 4),
               ],
             ),
 

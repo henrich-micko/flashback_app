@@ -1,6 +1,33 @@
 import 'package:flashbacks/utils/models.dart';
 
-class User {
+
+class CreateUserResponse extends BaseModel {
+  final int id;
+  final String username;
+  final String email;
+  String profile;
+  final String token;
+
+  CreateUserResponse({
+    required this.id,
+    required this.username,
+    required this.email,
+    required this.profile,
+    required this.token
+  });
+
+  factory CreateUserResponse.fromJson(Map<String, dynamic> json) {
+    return CreateUserResponse(
+        id: json["id"],
+        username: json["username"],
+        email: json["email"],
+        profile: json["profile"],
+        token: json["token"]
+    );
+  }
+}
+
+class User extends BaseModel {
   final int id;
   final String username;
   final String email;
@@ -95,12 +122,14 @@ class MiniUser extends BaseModel {
   final String username;
   final String email;
   final String profileUrl;
+  final String? about;
 
   MiniUser({
     required this.id,
     required this.username,
     required this.email,
-    required this.profileUrl
+    required this.profileUrl,
+    required this.about
   });
 
   factory MiniUser.fromJson(Map<String, dynamic> json) {
@@ -108,20 +137,72 @@ class MiniUser extends BaseModel {
         id: json["id"],
         username: json["username"],
         email: json["email"],
-        profileUrl: json["profile"]
-    );
-  }
-  
-  factory MiniUser.fromAnonymous(AnonymousUserData instance) {
-    return MiniUser(
-      id: instance.id,
-      username: instance.username,
-      email: instance.email,
-      profileUrl: instance.profileUrl
+        profileUrl: json["profile"],
+        about: json["about"],
     );
   }
 }
 
+class MiniUserContextual extends MiniUser {
+  final FriendshipStatus friendshipStatus;
+  final List<MiniUser> mutualFriends;
+
+  MiniUserContextual({
+    required super.id,
+    required super.email,
+    required super.profileUrl,
+    required super.username,
+    required this.friendshipStatus,
+    required this.mutualFriends,
+    required super.about,
+  });
+
+  factory MiniUserContextual.fromJson(Map<String, dynamic> json) {
+    return MiniUserContextual(
+      id: json["id"],
+      username: json["username"],
+      email: json["email"],
+      profileUrl: json["profile"],
+      friendshipStatus: FriendshipStatus.values[json["friendship_status"]],
+      mutualFriends: List.from(json["mutual_friends"].map((p) => MiniUser.fromJson(p))),
+      about: json["about"],
+    );
+  }
+}
+
+class UserContextual extends MiniUserContextual {
+  int friendsCount;
+  int eventsCount;
+  int flashbacksCount;
+
+  UserContextual({
+    required super.id,
+    required super.email,
+    required super.profileUrl,
+    required super.username,
+    required super.friendshipStatus,
+    required super.mutualFriends,
+    required this.friendsCount,
+    required this.eventsCount,
+    required this.flashbacksCount,
+    required super.about,
+  });
+
+  factory UserContextual.fromJson(Map<String, dynamic> json) {
+    return UserContextual(
+      id: json["id"],
+      username: json["username"],
+      email: json["email"],
+      profileUrl: json["profile"],
+      friendshipStatus: FriendshipStatus.values[json["friendship_status"]],
+      mutualFriends: List.from(json["mutual_friends"].map((p) => MiniUser.fromJson(p))),
+      friendsCount: json["friends_count"],
+      eventsCount: json["events_count"],
+      flashbacksCount: json["flashbacks_count"],
+      about: json["about"],
+    );
+  }
+}
 
 class AnonymousUserData extends BaseModel {
   final int id;
@@ -152,6 +233,39 @@ class AnonymousUserData extends BaseModel {
         username: "flashbacks_user",
         email: "flashbacks_user@flashbacks.com",
         profileUrl: "https://img.buzzfeed.com/buzzfeed-static/static/2020-03/19/3/campaign_images/756f49d8c6f3/if-you-can-name-at-least-12-the-office-employees--2-604-1584589997-10_dblbig.jpg?resize=1200:*",
+    );
+  }
+}
+
+class AuthMiniUser extends MiniUser {
+  int friendsCount;
+  int eventsCount;
+  int flashbacksCount;
+  DateTime dateJoined;
+
+  AuthMiniUser({
+    required super.id,
+    required super.email,
+    required super.profileUrl,
+    required super.username,
+    required this.friendsCount,
+    required this.eventsCount,
+    required this.flashbacksCount,
+    required this.dateJoined,
+    required super.about,
+  });
+
+  factory AuthMiniUser.fromJson(Map<String, dynamic> json) {
+    return AuthMiniUser(
+        id: json["id"],
+        username: json["username"],
+        email: json["email"],
+        profileUrl: json["profile"],
+        friendsCount: json["friends_count"],
+        eventsCount: json["events_count"],
+        flashbacksCount: json["flashbacks_count"],
+        dateJoined: DateTime.parse(json["date_joined"]).toLocal(),
+        about: json["about"],
     );
   }
 }

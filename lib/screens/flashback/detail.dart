@@ -1,7 +1,6 @@
 import 'package:flashbacks/models/event.dart';
 import 'package:flashbacks/models/flashback.dart';
 import 'package:flashbacks/providers/api.dart';
-import 'package:flashbacks/services/api/client.dart';
 import 'package:flashbacks/services/api/event.dart';
 import 'package:flashbacks/utils/time.dart';
 import 'package:flashbacks/utils/widget.dart';

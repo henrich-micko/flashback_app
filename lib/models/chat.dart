@@ -48,4 +48,12 @@ class Message extends BaseModel {
       parent: json["parent"] != null ? MessageParent.fromJson(json["parent"]) : null,
     );
   }
+
+  MessageParent toMessageParent() {
+    return MessageParent(
+      pk: pk,
+      content: content,
+      user: user
+    );
+  }
 }

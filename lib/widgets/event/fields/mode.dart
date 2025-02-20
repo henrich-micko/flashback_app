@@ -29,7 +29,7 @@ class _EventViewersModeFieldCardState extends State<EventViewersModeFieldCard> {
   void initState() {
     super.initState();
     _eventViewersMode = widget.eventViewersMode;
-    _mutualFriendsLimit = 30;
+    _mutualFriendsLimit = widget.mutualFriendsLimit * 100;
   }
 
   @override

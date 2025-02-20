@@ -3,9 +3,16 @@ import 'package:flutter/material.dart';
 
 
 class TitleFieldCard extends StatefulWidget {
+  final String? defaultTitle;
   final Function(String value) onChange;
   final FieldError? fieldError;
-  const TitleFieldCard({super.key, required this.onChange, this.fieldError});
+
+  const TitleFieldCard({
+    super.key,
+    required this.onChange,
+    this.fieldError,
+    this.defaultTitle
+  });
 
   @override
   State<TitleFieldCard> createState() => _TitleFieldCardState();
@@ -13,6 +20,13 @@ class TitleFieldCard extends StatefulWidget {
 
 class _TitleFieldCardState extends State<TitleFieldCard> {
   final TextEditingController _titleController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.defaultTitle != null)
+      _titleController.text = widget.defaultTitle!;
+  }
 
   void _handleChange(String value) {
     setState(() => _titleController.text = value);

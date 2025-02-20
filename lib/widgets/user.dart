@@ -1,4 +1,6 @@
 import 'package:flashbacks/models/user.dart';
+import 'package:flashbacks/providers/api.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:material_symbols_icons/material_symbols_icons.dart';
@@ -7,12 +9,17 @@ class UserProfilePicture extends StatelessWidget {
   final String profilePictureUrl;
   final double? size;
 
-  const UserProfilePicture({super.key, required this.profilePictureUrl, this.size});
+  const UserProfilePicture(
+      {super.key, required this.profilePictureUrl, this.size});
 
   @override
   Widget build(BuildContext context) {
     return CircleAvatar(
-      backgroundImage: NetworkImage(profilePictureUrl),
+      backgroundImage: NetworkImage(ApiModel.fromContext(context)
+          .api
+          .apiBaseUrl
+          .resolve(profilePictureUrl)
+          .toString()),
       radius: size ?? 30,
     );
   }
@@ -78,9 +85,12 @@ class UserCollectionColumn<T extends User> extends StatelessWidget {
           alignment: WrapAlignment.start,
           spacing: 10,
           children: collection
-              .map((item) =>
-                UserCard(user: item, onTap: () { if (onItemTap != null) onItemTap!(item); })
-              ).toList(),
+              .map((item) => UserCard(
+                  user: item,
+                  onTap: () {
+                    if (onItemTap != null) onItemTap!(item);
+                  }))
+              .toList(),
         ));
   }
 }
@@ -89,8 +99,7 @@ class UserCard extends StatelessWidget {
   final User user;
   final Function()? onTap;
 
-  const UserCard(
-      {super.key, required this.user, this.onTap});
+  const UserCard({super.key, required this.user, this.onTap});
 
   void handleClick() {
     if (onTap != null) onTap!();
@@ -109,8 +118,7 @@ class UserCard extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    UserProfilePicture(
-                        profilePictureUrl: user.profileUrl),
+                    UserProfilePicture(profilePictureUrl: user.profileUrl),
                     buildProfileInfo()
                   ],
                 ),
@@ -135,7 +143,7 @@ class UserCard extends StatelessWidget {
 }
 
 class UserAsSelector extends StatefulWidget {
-  final User user;
+  final UserContextual user;
   final bool? defaultValue;
   final Function(bool value)? onChanged;
 
@@ -160,6 +168,12 @@ class _UserAsSelector extends State<UserAsSelector> {
     if (widget.onChanged != null) widget.onChanged!(isSelected);
   }
 
+  String _getMutualFriendLabel() {
+    if (widget.user.mutualFriends.isEmpty) return "This user is stranger";
+    return "Friend with ${widget.user.mutualFriends.first.username}"
+        "${widget.user.mutualFriends.length == 1 ? "" : "and ${widget.user.mutualFriends.length - 1} more"}";
+  }
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -167,14 +181,16 @@ class _UserAsSelector extends State<UserAsSelector> {
         child: Container(
             color: Colors.transparent,
             width: 360,
-            height: 70,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  mainAxisAlignment: MainAxisAlignment.start,
                   children: [
                     UserProfilePicture(
-                        profilePictureUrl: widget.user.profileUrl),
+                        profilePictureUrl: widget.user.profileUrl, size: 25),
                     buildProfileInfo()
                   ],
                 ),
@@ -185,59 +201,132 @@ class _UserAsSelector extends State<UserAsSelector> {
 
   Widget buildProfileInfo() {
     return Padding(
-      padding: const EdgeInsets.only(top: 8.0, left: 15.0),
+      padding: const EdgeInsets.only(left: 15.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.start,
         children: <Widget>[
           Text(widget.user.username,
               style: const TextStyle(color: Colors.white, fontSize: 20.0)),
-          Text(widget.user.quickDetail,
-              style: const TextStyle(color: Colors.white54, fontSize: 15.0)),
+          Text(_getMutualFriendLabel(),
+              style: const TextStyle(color: Colors.grey)),
         ],
       ),
     );
   }
 }
 
-
 class UserStack extends StatelessWidget {
   final List<String> usersProfilePicUrls;
   final double size;
 
-  const UserStack({super.key, required this.usersProfilePicUrls, required this.size});
+  const UserStack(
+      {super.key, required this.usersProfilePicUrls, required this.size});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-        height: size * 2 + 4,
-        width: (size * 2 - 4) * usersProfilePicUrls.length,
-        alignment: Alignment.center,
-        child: Padding(
-          padding: const EdgeInsets.only(top: 0, left: 0),
-          child: Stack(
-              clipBehavior: Clip.none,
-              alignment: AlignmentDirectional.bottomEnd,
-              children: usersProfilePicUrls
-                  .asMap()
-                  .entries
-                  .map((item) => Positioned(
-                left: item.key * 16,
-                child: Container(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                        color: const Color(0xff141218),
-                        width: 2.0), // Border color and width
-                  ),
-                  child: UserProfilePicture(
-                    profilePictureUrl: item.value,
-                    size: size,
-                  ),
-                ),
-              ))
-                  .toList()),
-        ),
-      );
+      height: size * 2 + 4,
+      width: (size * 2 - 4) * usersProfilePicUrls.length,
+      alignment: Alignment.center,
+      child: Stack(
+          clipBehavior: Clip.none,
+          alignment: AlignmentDirectional.bottomEnd,
+          children: usersProfilePicUrls
+              .asMap()
+              .entries
+              .map((item) => Positioned(
+                    left: item.key * size * 1.5,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                            color: Colors.black,
+                            width: 1.0), // Border color and width
+                      ),
+                      child: UserProfilePicture(
+                        profilePictureUrl: item.value,
+                        size: size,
+                      ),
+                    ),
+                  ))
+              .toList()),
+    );
   }
 }
 
+enum UserContextualCardLabel {
+  status,
+  mutualFriends,
+}
+
+class UserContextualCard extends StatelessWidget {
+  final MiniUserContextual user;
+  final Function()? onTap;
+  final Widget? actionWidget;
+  final UserContextualCardLabel label;
+
+  const UserContextualCard(
+      {super.key, required this.user, this.onTap, this.actionWidget, this.label = UserContextualCardLabel.status});
+
+  void _handleTap() {
+    if (onTap != null) onTap!();
+  }
+
+  String _getMutualFriendLabel() {
+    if (user.mutualFriends.isEmpty) return "You have no mutual friends";
+    return "Friend with ${user.mutualFriends.first.username}"
+        "${user.mutualFriends.length == 1 ? "" : "and ${user.mutualFriends.length - 1} more"}";
+  }
+
+  String _getStatusLabel() {
+    if (user.friendshipStatus == FriendshipStatus.friend) return "🎎 You are friends";
+    if (user.friendshipStatus == FriendshipStatus.requestToMe) return "✨ Wants to be your friend";
+    return "You are not related"; // say it nicer
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+        onTap: _handleTap,
+        child: Container(
+            color: Colors.transparent,
+            width: double.infinity,
+            height: 70,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    UserProfilePicture(
+                        profilePictureUrl: user.profileUrl, size: 25),
+                    buildProfileInfo()
+                  ],
+                ),
+                if (actionWidget != null) actionWidget!,
+              ],
+            )));
+  }
+
+  Widget buildProfileInfo() {
+    return Padding(
+      padding: const EdgeInsets.only(left: 15.0),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(user.username,
+              style: const TextStyle(color: Colors.white, fontSize: 20.0)),
+
+          if (label == UserContextualCardLabel.status)
+            Text(_getStatusLabel(),
+                style: const TextStyle(color: Colors.grey)),
+
+          if (label == UserContextualCardLabel.mutualFriends)
+            Text(_getMutualFriendLabel(),
+                style: const TextStyle(color: Colors.grey)),
+        ],
+      ),
+    );
+  }
+}

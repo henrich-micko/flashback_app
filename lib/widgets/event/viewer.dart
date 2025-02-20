@@ -6,6 +6,7 @@ import 'package:flashbacks/providers/api.dart';
 import 'package:flashbacks/services/api/event.dart';
 import 'package:flashbacks/utils/time.dart';
 import 'package:flashbacks/utils/widget.dart';
+import 'package:flashbacks/widgets/event/package.dart';
 import 'package:flashbacks/widgets/user.dart';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
@@ -14,47 +15,61 @@ import 'package:material_symbols_icons/material_symbols_icons.dart';
 class EventViewerCard extends StatefulWidget {
   final EventViewer eventViewer;
   final Uri mediaSourceServer;
+  final Function()? onOpen;
 
   const EventViewerCard(
-      {super.key, required this.eventViewer, required this.mediaSourceServer});
+      {super.key, required this.eventViewer, required this.mediaSourceServer, this.onOpen});
 
   @override
   State<EventViewerCard> createState() => _EventViewerCardState();
 }
 
 class _EventViewerCardState extends State<EventViewerCard> {
+  late EventApiDetailClient _eventApiClient;
   late Future<Iterable<EventMember>> _eventFriendsMembers;
 
   @override
   void initState() {
     super.initState();
-    _eventFriendsMembers = ApiModel.fromContext(context).api.event
-        .detail(widget.eventViewer.event.id).getFriendsMembers();
+
+    _eventApiClient = ApiModel.fromContext(context).api.event
+        .detail(widget.eventViewer.event.id);
+    _eventFriendsMembers = _eventApiClient.getFriendsMembers();
   }
 
   String _getPreviewFlashbackMediaUrl(EventPreviewFlashback epf) {
     return widget.mediaSourceServer.resolve(epf.media).toString();
   }
 
-  void _handleTap() {}
+  void _handleTap(BuildContext context) async {
+    if (!widget.eventViewer.isOpened) {
+      _eventApiClient.markAsOpen();
+
+      if (widget.onOpen != null) widget.onOpen!();
+    }
+    showModalBottomSheetFlashbacksPackage(context, widget.eventViewer.event.id);
+  }
 
   @override
   Widget build(BuildContext context) {
-    final width = MediaQuery.of(context).size.width * 0.95;
+    final width = MediaQuery.of(context).size.width * 0.97;
 
-    return SizedBox(
-      height: 350,
-      width: width,
-      child: GestureDetector(
-        onTap: _handleTap,
-        child: Card.outlined(
-            color: Colors.transparent,
-            child: Column(
-              children: [
-                _buildTopBar(),
-                _buildPreview(width),
-              ],
-            )),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 13),
+      child: SizedBox(
+        height: 350,
+        width: width,
+        child: GestureDetector(
+          onTap: () => _handleTap(context),
+          child: Card.outlined(
+              color: Colors.transparent,
+              child: Column(
+                children: [
+                  _buildTopBar(),
+                  _buildPreview(width),
+                ],
+              )),
+        ),
       ),
     );
   }
@@ -90,7 +105,7 @@ class _EventViewerCardState extends State<EventViewerCard> {
                 ),
                 getFutureBuilder(_eventFriendsMembers, (items) =>  UserStack(
                   usersProfilePicUrls: items
-                      .map((f) => f.user.profileUrl)
+                      .map((f) => _eventApiClient.apiBaseUrl.resolve(f.user.profileUrl).toString())
                       .toList(),
                   size: 13,
                 ))
@@ -140,6 +155,7 @@ class _EventViewerCardState extends State<EventViewerCard> {
                     _getPreviewFlashbackMediaUrl(
                         widget.eventViewer.preview[0].flashback),
                     fit: BoxFit.cover,
+                    width: width / 2,
                     height: height,
                   )),
                 )),
@@ -201,7 +217,7 @@ class _EventViewerCardState extends State<EventViewerCard> {
   }
 
   Widget _wrapPreviewInLock(Image preview) {
-    if (widget.eventViewer.isMember)
+    if (widget.eventViewer.isOpened)
       return preview;
 
     return Stack(
@@ -223,7 +239,10 @@ class _EventViewerCardState extends State<EventViewerCard> {
 }
 
 class EventViewerCardCollection extends StatefulWidget {
-  const EventViewerCardCollection({super.key});
+  final Iterable<EventViewer> eventViewers;
+  final Function()? onOpen;
+
+  const EventViewerCardCollection({super.key, required this.eventViewers, this.onOpen});
 
   @override
   State<EventViewerCardCollection> createState() =>
@@ -232,14 +251,12 @@ class EventViewerCardCollection extends StatefulWidget {
 
 class _EventViewerCardCollectionState extends State<EventViewerCardCollection> {
   late EventApiClient _apiEventClient;
-  late Future<Iterable<EventViewer>> _eventViewers;
 
   @override
   void initState() {
     super.initState();
 
     _apiEventClient = ApiModel.fromContext(context).api.event;
-    _eventViewers = _apiEventClient.toView();
   }
 
   @override
@@ -248,16 +265,13 @@ class _EventViewerCardCollectionState extends State<EventViewerCardCollection> {
       padding: const EdgeInsets.only(top: 20.0),
       child: Center(
         child: SizedBox(
-            height: 350,
-            width: MediaQuery.of(context).size.width * 0.95,
-            child: getFutureBuilder(
-                _eventViewers,
-                (ev) => Column(
-                    children: ev
+            width: double.infinity,
+            child: Column(
+                    children: widget.eventViewers
                         .map((item) => EventViewerCard(
                             eventViewer: item,
                             mediaSourceServer: _apiEventClient.apiBaseUrl))
-                        .toList()))),
+                        .toList())),
       ),
     );
   }

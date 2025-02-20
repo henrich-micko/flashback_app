@@ -1,15 +1,20 @@
 import 'dart:async';
+import 'dart:ui';
 import 'package:flashbacks/models/chat.dart';
 import 'package:flashbacks/models/event.dart';
 import 'package:flashbacks/models/user.dart';
 import 'package:flashbacks/providers/api.dart';
 import 'package:flashbacks/services/api/event.dart';
-import 'package:flashbacks/services/websockets/chat.dart';
+import 'package:flashbacks/services/websockets/client.dart';
+import 'package:flashbacks/utils/utils.dart';
 import 'package:flashbacks/utils/widget.dart';
 import 'package:flashbacks/widgets/event/chat/message.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:logger/logger.dart';
 import 'package:material_symbols_icons/material_symbols_icons.dart';
+import 'package:material_symbols_icons/symbols.dart';
+import 'package:sortedmap/sortedmap.dart';
 
 
 class EventDetailScreen extends StatefulWidget {
@@ -26,11 +31,14 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
   final TextEditingController _messageEditingController = TextEditingController();
 
   late EventApiDetailClient _eventApiClient;
-  late ChatWebSocketService _chatWebSocketService;
+  late ClientWebSocketService _websocket;
 
-  late User? _authUser;
+  late MiniUser? _authUser;
   late Future<Event> _event;
-  late List<Message> _messages;
+
+  final SortedMap<int, Message> _messages = SortedMap(const Ordering.byKey());
+  MessageParent? _messageParent;
+
   String? _nextMessageSource;
   bool _isLoading = false;
 
@@ -42,12 +50,10 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
 
     _authUser = apiModel.currUser;
     _eventApiClient = apiModel.api.event.detail(widget.eventId);
-
-    _chatWebSocketService = _eventApiClient.getChatWebSocket(_onMessage);
-    _chatWebSocketService.connect();
+    _websocket = apiModel.api.websocket;
+    _websocket.onMessage = _onMessage;
 
     _event = _eventApiClient.get();
-    _messages = [];
 
     _loadMessages();
     _scrollController.addListener(_scrollListener);
@@ -56,7 +62,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
   @override
   void dispose() {
     _scrollController.dispose();
-    _chatWebSocketService.close();
+    _websocket.onMessage = null;
     super.dispose();
   }
 
@@ -69,33 +75,69 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     // await Future.delayed(const Duration(seconds: 0)); // for testing only
     _eventApiClient.chat.all(path: _nextMessageSource).then((messages) {
       setState(() {
-        _messages.addAll(messages.results);
-        _nextMessageSource = messages.next;
+        for (Message message in messages.results)
+          _messages[message.pk] = message;
         _isLoading = false;
       });
     });
   }
 
+  Message _getMessageByIndex(int index) {
+    final pk = _messages.keys.elementAt(_messages.length-index-1);
+    return _messages[pk]!;
+  }
+
   void _onMessage(Message message) {
-    setState(() => _messages.insert(0, message));
+    setState(() => _messages[message.pk] = message);
   }
 
   void _sendMessage(String messageContent) {
-    _chatWebSocketService.sendMessage(messageContent);
+    Logger().i(_messageParent);
+    _websocket.sendMessage(
+        widget.eventId, messageContent, parent: _messageParent
+    );
   }
 
   void _handleSendMessage() {
     final messageContent = _messageEditingController.text;
     if (messageContent == "") return;
     _sendMessage(messageContent.trim());
-    setState(() => _messageEditingController.clear());
+    setState(() {
+      _messageEditingController.clear();
+      _messageParent = null;
+    });
   }
 
-  bool _isFirstOfStack(Message message, int index) =>
-    index == 0 || message.user.id != _messages[index - 1].user.id;
+  void _handleLikeUnlikeMessage(int messageId) {
+    _websocket.likeUnlike(messageId);
+  }
 
-  bool _isLastOfStack(Message message, int index) =>
-    index == _messages.length - 1 || message.user.id != _messages[index + 1].user.id;
+  void _handleLongPressMessage(int messageId) {
+    if (!_messages.containsKey(messageId)) return;
+    setState(() =>
+      _messageParent = _messages[messageId]!.toMessageParent()
+    );
+  }
+
+  void _handleCloseMessageParent() {
+    setState(() => _messageParent = null);
+  }
+
+  bool _isFirstOfStack(Message message) {
+    try {
+      return message.user.id != _messages[_messages.firstKeyAfter(message.pk)]!.user.id;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  bool _isLastOfStack(Message message){
+    try {
+      return message.user.id != _messages[_messages.lastKeyBefore(message.pk)]!.user.id;
+    } catch (e) {
+      return false;
+    }
+  }
 
   void _scrollListener() async {
     if (!context.mounted) return;
@@ -118,25 +160,40 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
               _event, (event) => Text("${event.emoji.code} ${event.title}")),
           leading: IconButton(
               icon: const Icon(Icons.arrow_back),
-              onPressed: () => context.go("/home")),
+              onPressed: () => context.pop()),
           actions: [
+            getFutureBuilder(_event, (event) {
+              if (event.status != EventStatus.activated)
+                return Container();
+              return IconButton(
+                padding: EdgeInsets.zero,
+                onPressed: () => context.push("/event/${widget.eventId}/flashback/create/"),
+                icon: const Icon(Symbols.camera),
+                color: _messageEditingController.text.isEmpty ? Colors.grey : Colors.white,
+              );
+            }),
             IconButton(
-                onPressed: () => {},
-                icon: const Icon(Icons.more_vert))
+                onPressed: () => context.push("/event/${widget.eventId}/info/"),
+                icon: const Icon(Symbols.info)),
+            IconButton(
+                onPressed: () => context.push("/event/${widget.eventId}/options/"),
+                icon: const Icon(Symbols.more_vert))
           ],
         ),
         body: SizedBox(
           width: MediaQuery.of(context).size.width,
-          child: Padding(
-            padding: const EdgeInsets.all(10.0),
-            child: Scrollbar(
-                child: Column(
-              children: [
-                Expanded(child: _buildMessagesSection()),
-                _buildMessageInput(),
-              ],
-            )),
-          ),
+          child: Scrollbar(
+              child: Column(
+            children: [
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: _buildMessagesSection(),
+                ),
+              ),
+              _buildMessageInput(),
+            ],
+          )),
         ));
   }
 
@@ -145,33 +202,57 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
       padding: const EdgeInsets.only(top: 30),
       child: Container(
         decoration: BoxDecoration(
-          border: Border.all(color: Colors.grey, width: 0.5),
-          borderRadius: const BorderRadius.all(Radius.circular(11)),
+          color: _messageParent == null ? Colors.transparent : Colors.black,
+          borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(11),
+              topRight: Radius.circular(11)
+          ),
+          border: _messageParent == null ? null : Border.all(color: Colors.grey, width: 0.4),
         ),
-        child: Row(
+        child: Column(
           children: [
-            Expanded(
-              child: TextField(
-                controller: _messageEditingController,
-                style: const TextStyle(color: Colors.white70, fontSize: 17),
-                decoration: const InputDecoration(
-                  fillColor: Colors.black12,
-                  hintText: "Type your message",
-                  filled: true,
-                  hintStyle: TextStyle(
-                      color: Colors.grey,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w400),
-                  border: InputBorder.none,
+            _buildMessageParent(),
+            Padding(
+              padding: const EdgeInsets.only(left: 8, right: 8, bottom: 8),
+              child: Container(
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey, width: 0.5),
+                  borderRadius: const BorderRadius.all(Radius.circular(11)),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _messageEditingController,
+                        onSubmitted: (_) => _handleSendMessage(),
+                        style: const TextStyle(color: Colors.white70, fontSize: 17),
+                        decoration: const InputDecoration(
+                          fillColor: Colors.transparent,
+                          hintText: "Type your message",
+                          filled: true,
+                          hintStyle: TextStyle(
+                              color: Colors.grey,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w400),
+                          border: InputBorder.none,
+                        ),
+                      ),
+                    ),
+
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          IconButton(
+                            onPressed: _handleSendMessage,
+                            icon: const Icon(Symbols.send),
+                            color: _messageEditingController.text.isEmpty ? Colors.grey : Colors.white,
+                          ),
+                        ],
+                      )
+                  ],
                 ),
               ),
             ),
-
-            IconButton(
-              onPressed: _handleSendMessage,
-              icon: const Icon(Symbols.send),
-              color: _messageEditingController.text.isEmpty ? Colors.grey : Colors.white,
-            )
           ],
         ),
       ),
@@ -196,12 +277,67 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
   }
 
   Widget _buildMessageBubble(int index) {
-    final message = _messages[index];
+    final Message message = _getMessageByIndex(index);
+
     return MessageBubble(
       message: message,
-      isFirstOfStack: _isFirstOfStack(message, index),
-      isLastOfStack: _isLastOfStack(message, index),
+      onDoubleTap: _handleLikeUnlikeMessage,
+      onLongPress: _handleLongPressMessage,
+      isFirstOfStack: _isFirstOfStack(message),
+      isLastOfStack: _isLastOfStack(message),
       fromAuthUser: _authUser != null && message.user.id == _authUser!.id,
+    );
+  }
+
+  Widget _buildMessageParent() {
+    if (_messageParent == null)
+      return Container();
+
+    return Padding(
+      padding: const EdgeInsets.only(left: 14, top: 9, right: 14),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Respond to ${_messageParent!.user.username}",
+                style: const TextStyle(fontSize: 13, color: Colors.grey, height: 1),
+                textAlign: TextAlign.start,
+              ),
+              Row(
+                children: [
+                  Transform(
+                      alignment: Alignment.center,
+                      transform: Matrix4.identity()..scale(-1.0, 1.0),
+                      child:
+                      const Icon(Symbols.reply, color: Colors.grey, size: 22)),
+                  Container(
+                    margin: const EdgeInsets.all(1),
+                    child: Padding(
+                      padding: const EdgeInsets.only(
+                          left: 7, right: 7, top: 5, bottom: 5),
+                      child: Text(
+                          _messageParent!.content.isEmpty
+                              ? "wsew?"
+                              : truncateWithEllipsis(_messageParent!.content, 30),
+                          textAlign: TextAlign.start,
+                          style: const TextStyle(fontSize: 16, color: Colors.grey)),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+
+          GestureDetector(
+              onTap: _handleCloseMessageParent,
+              child: const Icon(Symbols.close_rounded, color: Colors.grey, size: 17),
+          )
+        ]
+      ),
     );
   }
 }

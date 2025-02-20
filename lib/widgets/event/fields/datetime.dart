@@ -133,7 +133,7 @@ class _DateTimeFieldCardState extends State<DateTimeFieldCard> {
             mainAxisAlignment: MainAxisAlignment.start,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text("Title ", style: TextStyle(fontSize: 22.5)),
+              const Text("Time", style: TextStyle(fontSize: 22.5)),
 
               if (widget.fieldError != null && widget.fieldError!.isActive)
                 const Text("*", style: TextStyle(fontSize: 22.5, color: Colors.red)),
@@ -189,7 +189,7 @@ class _DateTimeFieldCardState extends State<DateTimeFieldCard> {
     return Row(
       children: [
         Text("Till", style: widget.ordWordStyle),
-        _buildSpecWord(_humanizeDateTime(_startAt), () => _handleEndAtDateTap(context)),
+        _buildSpecWord(_humanizeDateTime(_endAt), () => _handleEndAtDateTap(context)),
         Text("at", style: widget.ordWordStyle),
         _buildSpecWord(timeString, () => _handleEndAtTimeTap(context)),
       ],
@@ -218,17 +218,21 @@ class _DateTimeFieldCardState extends State<DateTimeFieldCard> {
     final now = DateTime.now();
     final difference = dateTime.difference(now);
 
-    if (difference.inDays == 0) {
+    if (now.day == dateTime.day) {
       return 'Today';
     }
 
-    if (difference.inDays == 1) {
+    if (now.day + 1 == dateTime.day) {
       return 'Tomorrow';
     }
 
     if (difference.inDays > 1 && difference.inDays <= 7) {
-      final weekday = DateFormat('EEEE').format(dateTime);
-      return 'Next $weekday';
+      return DateFormat('EEEE').format(dateTime); // weekday
+    }
+
+    if (difference.inDays > 7 && difference.inDays <= 14) {
+      final weekday = DateFormat('EEEE').format(dateTime); // weekday
+      return "Next $weekday";
     }
 
     if (difference.inDays > 7 && dateTime.year == now.year) {

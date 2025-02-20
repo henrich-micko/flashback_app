@@ -1,0 +1,207 @@
+vytvorenie flutter projektu
+    - vytvornie flutter projektu pomocou príkazu flutter create flashbacks
+    - otvorenie projektu v Android Studio
+    - vytvornie emulatora
+    - spustenie projektu na emulatore
+
+    - zakldadna struktura suborov v projekte
+        lib/
+            screens/ - obrazovky (!jednoducho co je to obrazovka (activity) for fluttery)
+            widgets/ - widgety
+            providers/ - providery (obsahuje globalny staty aplikacie)
+            models/ - modely (!jednoducho co je to model for fluttery)
+            services/ - sluzby (obsahuje potrebne nastroje pre komunikaciu s serverom)
+            utils/ - pomocne nastroje (napr. konverzia dat, povoľovanie pristupu...)
+                api/ - obsahuje triedy pre komunikaciu s API
+            main.dart - vstupny bod aplikacie
+
+        pre navigaciu medzi obrazovkami sme pouzilio go_router ktoreho rozne cesty sme zadefinovali v subore
+        router.dart
+
+Vytvorenie flutter nastroju na wrappovanie api
+    vytvorenie tridy abstraktnej BaseApiClient v subore utils/api/client.dart
+    tada trieda sluzi ako zakladna trieda pre vsetky api endpoint
+    obsahuje 2 paramterne a to je String Token a Uri apiBaseURl
+    pricom Token je authentikacny token pre pouzivatela
+    a apiBaseUrl je adresa servera na ktory sa ma aplikacia pripojit
+    trieda obsahuje metodu getHeaders ktorej ulohou je vratit hlavicky pre api request vratane autentikacneho tokenu
+    trieda obsahuje preddeefinovane vsetkych metody pre api requesty (get, post, put, delete)
+    ako napriklad getRequest ktora zobere ako paramter uri, popripade dotacnose GET paramtetre a vrati odpoved z api
+    takto su definoane vsetky metody pre api requesty put, post, delete, path
+    trieda taktiz obsahuje CRUD metody ktore sluzia na priamu manipulaciu s modelmi
+    tieto metody su getItem, deleteItem, patchItem, deleteItem
+    napriklad metoda getItem<T>(Strign uri, funckia) zobere ako paramter url cestu a method ktora z json data vytvori flutter object typu <T>
+
+    ApiClient su casto len zdrkadom ViewSetov ktore existuju na strane backendu.
+
+    -> Dalsie typy api endpointu
+        okrem zakladneho endopointu existuju dalsie 2 abstrackne triedy a to su BaseApiModelClient a BaseApiModelDetailClient
+        ktore zatial co BaseApiClient ktory sluzi skorej na zapuzdrenie logiky, sluzia na priamiu pracu so specifickymi modelmi
+        do BaseApiModelClient si pomocou definovanych mixins viete implementovat metody pre ziskanie zoznamu modelov, vytvorenie modelu, upravu modelu a vymazanie modelu
+        tieto mixini sa nachadzaju v utils/api/mixins.dart su ApiModelAllMixin, ApiModelSearchMixin, ApiModelFilterMixin, ApiModelGetMixin a ApiModelDeleteMixin
+        pre ich potrebnu pracu potrebuje BaseApiModelClient (ktora dedit po BaseApiClient) daslie 2 parametre a to modelPath ktora sa "spoji" s apiBaseUrl a funkcia ktory sa pouziva na konvertovanie jsonu do dart objektu
+
+        BaseApiModelDetailClient sluzi na pracu uz s jednotlivou instanciou (jednym objektom) dedi po BaseApiModelDetailClient a potrebuje navyse jediny parmatre a to je detailPk
+        (primarny kluc tejto instancie)
+
+        pri requerstoch sa tento kluc automaticky prilepis za modelPath cize konecne adresa vyzrata takto apiBaseUrl + modelPath + detailPk
+        Standrartizoavana cesta ako ziskat BaseApiModelDetailClient je z metody detail(int detailPk) ktora by sa mala nachazdat na ApiBaseModelClient daneho modelu
+        takze na ziskanie specifickeho pouzivatela na zaklade primarneho kluca pouzivaujeme UserApiClient pre pouzivatelov a vytovrime tam metody ktora vrati UserApiDetailClient
+        ktora bude mat detailPk ako parameter
+
+    -> implementacia api wrappera
+        v subore services/api/client.dart vytvorime triedu ApiClient ktora sluzi ako koren celeho api stromu,
+        su v nej zadefinove dalsie endpointy ako user, event, auth a tak dalej, pre pochopenie konecny api strom mozue vyzerat takto
+
+        ApiClient
+            - UserApiClient
+                - UserApiDetailClient
+            - EventApiClient
+                - EventApiDetailClient
+            - AuthApiClient
+                - AuthApiDetailClient
+            - ...
+
+        kazdy ApiClient predava auth token svojim detom
+
+    -> Modely
+        Uz vysie spomynane modely su velmi jednoduche tridy ktore detie po BaseModel a obsahuje rozne paramtre (fieldy)
+        a factory funkciu fromJson ktora je schopne vytvorit instanciu s json dat
+
+Authentickacia na strane aplikacie
+    -> Api wrapper pre api authentikaciu
+        pomocu uz spominanuje strutkrury vytvorime AuthApiClient ktora dedi po BaseApiClient a nachadza sa v subore services/api/auth.dart
+        v tejto triede su definovane metody pre prihlasenie, registrovanie, prihlasenie pomocou google
+    -> Api provider alebo globalny state aplikacie
+        je to globalny state aplikacie ktory obsahuje informacie o prihlasenom pouzivatelovi
+        je dostupny uplne vsade nie len v jednej obrazovke ako normalny state
+        vytvorime triedu AuthProvider ktora dedi po ChangeNotifier a nachadza sa v subore providers/auth.dart
+        Vytvorenie modelu MiniUser v models/user.dart ktory obsahuje zakladne info o pouzivatelovi
+
+        po spusteni aplikacii sa v main funkcii precita token z zabezpeceneho ulozika a nastaledni sa zada ako vstupny paramteter pri initilazici ApiModel
+        ak token neexistuje tak sa vytvori nova instacia ApiClient s prazdnym tokenom
+        cely api strom je napojeny na ApiClient aby boli vsetky endpointy dostupne v celej aplikacii
+        ApiProvider obsahuje funkcia ako su login, logout, register, googleLogin ktore sluzia na authentikacie
+        tieto priamo spolupracuju s AuthApiClientom a jeho vratene data spracuvavaju
+        po prihlaseni pomocou funckia login na AuthProvider sa vytvori nova instacia ApiClient s tokenom a ulozi sa do zabezpeceneho uloziska
+        automaticky sa zavola funckcia _loadCurrUser ktora stuahne so servera info o prihlasenom pouzivatelovi a ulozi ich do _currUser
+
+        Pomocou static funckie fromContext vieme ziskat instanciu AuthProvider z lubovolnej casti aplikacie
+
+    -> Obrazovka pre authentikaciu pouzivatela
+        vsetka logika pre prihlasenie a registraii sa zapuzdruje do modreneho a prehladneho ui,
+
+        vytvorili sme obrazokvu v AuthScreen v subore screens/auth.dart
+        tato obrazovka sa vam defaultne otvorie ako neprihlasenemu pouzivateli
+        je nastaveny casovac ktory po 1 sekunde otvori modalneh menu ktore obsahuje vsetky moznosti prihlasenia
+        po zvoleni budete naviganovy ku vybranemu formu na vyplnenie
+
+-> Použivatelia na strane flutteru
+    -> api pre uzivatelov
+        Vytorili sme novy api model endpoint UserApiClient v subour /services/api/user.dart
+        a pomocou mixins pridali operacie get a filter a na novo zadefinovali methodu search na vyhladavanie
+        nasledne sme vytvorili UserDetailApiClient sa spravovanie špecifickeho pouzivatela a do UserApiClient pridali
+        funkciu detail na jeho vytvorenie
+
+        okrem toho sme vytvorili nove modely a to UserMini a UserContextual
+
+    -> api spravovanie priatelstva
+        na spravovanie priatelsvta sme vytvorili FriendApiClient endpoint ktory je viazany na detial pouzivatela
+        pod .friend a obsahuje implementaciu pre kazdu api funkcii na managment priatelsvta, sendRequest, acceptRequest,
+        acceptRequest, deleteRequestOrFriendship
+
+    -> vytovrnie obrazovky pouzivatela
+        zobrazuje udaje o specifickom pouzivatelovy, po intializacii si natiahne data pomocou UserApiClient
+        vo forme UserContextual
+        a ulozi do svojho lokolaneho statu (takto to funguje pri kazdej jednej obrazovke alebo statefull widgete)
+        ako je mozne vydiete na obrazkzku zobrazuje udaje ako meno, stav spolocnych priatelov ak existuju
+        pocet priatelov, eventov a flashbackov (ky tym sa neskor dostaneme)
+
+        na spodku hornej casti sa nachazda takzvane friendshipt action tlacidlo ktorym viete spravat vztah
+
+           Bez vztah - vytvorit friend request
+           poslany friend request z mojej strany - zrusit
+           poslany friend request z jeho mojej strany - potvrdit
+           priatelia - zrusit priatelstvo
+
+    -> obrazovka prihlaseneho pouzivatela
+        vytovirli sme CurrUserScreen v subore subor user/currUser/profile.dart ktora sluzi ako obrazovka prihlaseneho pouzivatela,
+        nahladom vyzera rovnako ako UserDetailScreen. pod informaciami o pouzivaterlovi sa nachdza vyber priatelov, udalosti, a nahladu na udasloti
+        po kliknuti na ponuka sa nam ponuka zobrazi. v pravom hornom vrchu sa nadhaza ikonka "viac moznosti" po jej kliknuti sa vam zobrati spodne okno
+        ktore obsahuje moznosti a ako upravit profile a odhlasenie pouzivatela. v casti uprava profilu si viete zmenit profilovu fotku, pouzivatelske meno
+        a informaciu o mne.
+
+-> Eventy na strane flutteru
+    -> implementacia api
+        vytvorili sme subor services/api/event.dart a v nom EventApiClient na spravu modelu Event
+        obsahuju methody na CRUD spravu, vyhladavanie medi udalostami, dalej sme vytvorili EventDetailApiClient
+        ktory sluzi na obsluhu specicifickeho eventu, na tochto api client sa taktiez napaja EventMemberApiClient
+
+
+    -> List obrazovka
+        v screens/event/list.dart sme vytvorili EventListScreen ktora zobrazuju zoznam vsetych eventov
+        v pravom rohu hore sa nachazda tlacidlo s ikonkou, na ktore ked klikene presmereujeme sa na CreateEventScreen
+        pod nim sa nechazda tlacidlo ktore sluzi na prepinanie eventov na zaklade statusu (otvorene a aktivivane) alebo zatvorene
+
+        pod nimi sa nachazda zoznam vsetych eventov, kazdy event sa zobrazuje ako widgeta ktoru sme vytovirli v widgets/event/item.dart
+        ta nam zobrazuje nazov emoji, nazov, casove udaje, pokial je event uz spusteny v pravom rohu
+        ukazuje cast do konca akcie, upravuje ho funkcia v utils.time.getCountdownLabel ktore vracia
+        String for formate "<cislena-hodnota><skratka-jednotky-casu>"
+
+        po kliknuti na obrazovku sa dostaneme do EventScreen (obrazovky pre specificku udalost)
+
+    -> Obrazova pre špecificky event
+        EventDetailScreen existiuje v screens/event/detail.dart
+
+        v pravom rohu sa nachazda tlacidlo na moznosti, po jeho kliknuti sa dotaneme na obrazovku
+        EventOptionsScreen
+
+        pokial je pouzivatel host eventu, zobrazia sa mu moznosti ako Settings, Members, Posters a
+        v druhej, (nebezpecnej zone moznost sa opusteni eventu, a jeho odstraneni), po opusteni sa stane admin
+        prvy pouzivatel ktory bol pridny, pokial taky nexitujue event sa odstrani.
+
+        v subore services/websockets/client.dart sme vytvorili clienta ClientWebSocketService ktory sluzi
+        na komunikacia s websocketmi na servery, obsahue vsetky funkcie potrebne na posielanie a prijmanie
+        správ
+
+        v  EventDetailScreen sme vytvorili ui zobrazenie pre vsetkych spravy, na zaciatku
+        sa nacitaju vsetky stare spravy pomocou API, posielanie a prijmanie novych správ funguje
+        cez websockety
+
+        na spodku obrazovky sa nachzda TextField sluzici na pisanie spravy
+
+    -> obrazovka na vytvornie
+         v subor screens/event/create.dart CreateEventScreen, ktora sa sklada z troj casti procesu
+         vytvararanie udalost, v provom vyplnie standartne udaje ako nazov, emoji, a casove udaje.
+         naselduju prokrocila nastavenie kde vieme nastavit kto bude mat pristup ku flashbackom (medialnym
+         suborom zaznamenynim pocas eventu) a ci chceme povolit nsfw.
+         nasledne je pouzivatel prespmerovany na obrazovku pre priadanie pouzivatelov
+
+    -> vytvorenie flashbacku
+        vytvorili sme obrazovku CreateFlashbackScreen v subore screens/flashback/create.dart
+        ktora po otvorenie pomocou kniznici camera nacita obraz s prednej kamary a obsah zobrazi v strede orazovky
+        v dolnej casti sa nachadza tlacidlo na prepknutie kamery, zapnutie blesku a vytvorenie snimky, po odfoteni alebo
+        natoceni videa sa vam obsah zobrazi a vy ho mozete potvrdit na odoslanie
+
+    -> EventViewer
+        - V subore widget/event/viewer.dart sme vytvorili widgetu EventViewer ktora sa sklada z dvoch casti.
+        v horenej casti sa nachadzaju informacie ako nazov, cast uzavretia a Zoznam pouzivatelov. v dolnej casti
+        sa nachadza 3 instancie z EventPreview ako nahliadka flashbackov eventu, pokial je ich menej ui sa prisposobi.
+        po kliknuti sa zo spodu otvori nahlad ktory obsahuje media obsah flashbacbcku a pouzivatel ma moznost prekliknut sa mediz nimi
+
+-> Home Screen
+    V subore screens/home.dart sme vytvorili HomeScreen
+    HomeScreen sa sklada z 4 casti. V horej sa nachdza top bar s nazvom aplikaciu a ikonkou ktory vas presmereju
+    na vas profil a tlacidlo ktore vas presmeruje na obrazovku vyhladavania (SearchScreen),
+    dalsia cast je kde vivtori Widgeta ktora oznamuje ze ma pouzivatel nove notifikacie.
+    dalsia cast sa sklada v za sebou eventy zaradene v riadku, medzi ktorymi vieme preklikavat
+    v dalsej casti s nachadza zoznam vsetkych EventViewerov pre pouzivatela zoradenych podla datum.
+
+    notifikacia
+        pridali sme potrebne funkcie do AuthApiClient na pracu s notifikaciami a po intalizacii HomeScreen
+        sme zistili ci notifikacie existuju, pokial ano zobrazi sa widgeta ktora uzivatelovi ich vyskyt oznami.
+        Po jej kliknuti sa zobrazi "spodne okno" v ktorom je ich zoznam a s moznostami na priatie a odmietnutie
+
+-> Search Screen
+    V subore screens/search.dart sme vytvorili SearchScreen ktora sluzi na vyhladavanie na priec aplikaciou
+    vyhladavat mozme medzi pouzivatalemi, udalostami a nahladamy na udalost.
